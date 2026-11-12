@@ -16,6 +16,8 @@ export default function PlayerPanel({ roster, pff, contracts, playerId, teamMode
   const [form, setForm] = useState(existing ?? BLANK);
   const [error, setError] = useState('');
   const [confirmRemove, setConfirmRemove] = useState(false);
+  // The edit form stays hidden until the Edit button is pressed (always open for a new player).
+  const [editing, setEditing] = useState(isNew);
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -45,7 +47,16 @@ export default function PlayerPanel({ roster, pff, contracts, playerId, teamMode
       }
     }
     onChange(next);
-    onClose();
+    if (isNew) onClose();
+    else setEditing(false);
+  }
+
+  function cancelEdit() {
+    if (isNew) return onClose();
+    setForm(existing);
+    setError('');
+    setConfirmRemove(false);
+    setEditing(false);
   }
 
   function moveTo(status) {
@@ -60,6 +71,49 @@ export default function PlayerPanel({ roster, pff, contracts, playerId, teamMode
     onClose();
   }
 
+  const editSection = (
+        <section className="panel-section editor">
+          <h3>{isNew ? 'Details' : 'Edit details'}</h3>
+          <div className="form">
+            <label>Name<input value={form.name} onChange={set('name')} autoFocus={isNew} /></label>
+            <label>Jersey<input value={form.jersey} onChange={set('jersey')} inputMode="numeric" /></label>
+            <label>Position
+              <select value={form.position} onChange={set('position')}>
+                {[...new Set([...POSITIONS, form.position])].map((p) => <option key={p}>{p}</option>)}
+              </select>
+            </label>
+            <label>Status
+              <select value={form.status} onChange={set('status')}>
+                {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+              </select>
+            </label>
+            <label>Acquisition (Ourlads code)<input value={form.acquisition ?? ''} onChange={set('acquisition')} placeholder="e.g. 26/3, CF26, U/Phi" /></label>
+            <label>Newcomer
+              <select value={form.tag ?? ''} onChange={set('tag')}>
+                <option value="">Returning</option>
+                {Object.entries(TAGS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </label>
+            <label>Availability
+              <select value={form.availability ?? ''} onChange={set('availability')}>
+                <option value="">—</option>
+                {Object.entries(AVAILABILITY).map(([k, v]) => <option key={k} value={k}>{k} — {v}</option>)}
+              </select>
+            </label>
+            <label>PFF player id<input value={form.pffId ?? ''} onChange={set('pffId')} inputMode="numeric" placeholder={data?.pffId ? `auto: ${data.pffId}` : 'auto'} /></label>
+            <label className="wide">Notes<textarea rows={3} value={form.notes ?? ''} onChange={set('notes')} /></label>
+          </div>
+          {error && <p className="msg error">{error}</p>}
+          <div className="panel-actions">
+            {!isNew && <button className={`danger${confirmRemove ? ' confirm' : ''}`} onClick={remove} onBlur={() => setConfirmRemove(false)}>{confirmRemove ? `Tap again to remove ${existing.name}` : 'Remove player'}</button>}
+            <span className="spacer" />
+            <button onClick={cancelEdit}>Cancel</button>
+            <button className="primary" onClick={apply}>{isNew ? 'Add player' : 'Apply'}</button>
+          </div>
+          <p className="hint">Apply updates the roster here; press “Save changes” at the top to keep it.</p>
+        </section>
+  );
+
   const bio = data?.bio;
   const slots = isNew ? [] : depthSlots(roster, playerId);
 
@@ -71,8 +125,17 @@ export default function PlayerPanel({ roster, pff, contracts, playerId, teamMode
             <h2>{isNew ? 'Add player' : <>{form.jersey && <span className="jersey">#{form.jersey}</span>} {form.name}</>}</h2>
             {!isNew && <p className="sub">{form.position} · {STATUS_LABELS[form.status]}{slots.length ? ` · ${slots.join(', ')}` : ''}</p>}
           </div>
-          <button className="close" onClick={onClose} aria-label="Close">✕</button>
+          <div className="panel-head-actions">
+            {!isNew && (
+              <button className="edit-toggle" onClick={() => (editing ? cancelEdit() : setEditing(true))} aria-pressed={editing}>
+                {editing ? 'Cancel' : 'Edit'}
+              </button>
+            )}
+            <button className="close" onClick={onClose} aria-label="Close">✕</button>
+          </div>
         </header>
+
+        {editing && editSection}
 
         {!isNew && (
           <section className="panel-section moves">
@@ -144,46 +207,6 @@ export default function PlayerPanel({ roster, pff, contracts, playerId, teamMode
           </section>
         )}
 
-        <section className="panel-section">
-          <h3>{isNew ? 'Details' : 'Edit'}</h3>
-          <div className="form">
-            <label>Name<input value={form.name} onChange={set('name')} autoFocus={isNew} /></label>
-            <label>Jersey<input value={form.jersey} onChange={set('jersey')} inputMode="numeric" /></label>
-            <label>Position
-              <select value={form.position} onChange={set('position')}>
-                {[...new Set([...POSITIONS, form.position])].map((p) => <option key={p}>{p}</option>)}
-              </select>
-            </label>
-            <label>Status
-              <select value={form.status} onChange={set('status')}>
-                {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
-              </select>
-            </label>
-            <label>Acquisition (Ourlads code)<input value={form.acquisition ?? ''} onChange={set('acquisition')} placeholder="e.g. 26/3, CF26, U/Phi" /></label>
-            <label>Newcomer
-              <select value={form.tag ?? ''} onChange={set('tag')}>
-                <option value="">Returning</option>
-                {Object.entries(TAGS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
-            </label>
-            <label>Availability
-              <select value={form.availability ?? ''} onChange={set('availability')}>
-                <option value="">—</option>
-                {Object.entries(AVAILABILITY).map(([k, v]) => <option key={k} value={k}>{k} — {v}</option>)}
-              </select>
-            </label>
-            <label>PFF player id<input value={form.pffId ?? ''} onChange={set('pffId')} inputMode="numeric" placeholder={data?.pffId ? `auto: ${data.pffId}` : 'auto'} /></label>
-            <label className="wide">Notes<textarea rows={3} value={form.notes ?? ''} onChange={set('notes')} /></label>
-          </div>
-          {error && <p className="msg error">{error}</p>}
-          <div className="panel-actions">
-            {!isNew && <button className={`danger${confirmRemove ? ' confirm' : ''}`} onClick={remove} onBlur={() => setConfirmRemove(false)}>{confirmRemove ? `Tap again to remove ${existing.name}` : 'Remove player'}</button>}
-            <span className="spacer" />
-            <button onClick={onClose}>Cancel</button>
-            <button className="primary" onClick={apply}>{isNew ? 'Add player' : 'Apply'}</button>
-          </div>
-          <p className="hint">Changes stay local until you press “Save changes” at the top.</p>
-        </section>
       </aside>
     </div>
   );

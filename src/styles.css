@@ -372,3 +372,9 @@ tbody tr:last-child > * { border-bottom: 0; }
 .contract-table tr.current td { background: var(--hover); font-weight: 600; }
 .contract-table tr.future td { color: var(--muted); }
 .contract a { color: var(--tag-none); }
+
+/* Player page header actions */
+.panel-head-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.panel-head .edit-toggle { background: none; color: var(--on-band); border-color: var(--band-border); font-weight: 600; }
+.panel-head .edit-toggle[aria-pressed='true'] { background: var(--orange); border-color: var(--orange); color: var(--on-accent); }
+.panel-section.editor { background: var(--hover); }
