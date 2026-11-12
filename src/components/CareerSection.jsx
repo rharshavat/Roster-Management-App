@@ -80,6 +80,9 @@ export default function CareerSection({ player, seasonGrade, pffSeason, teamMode
   );
 }
 
+// Preseason and college seasons get their own chip colours.
+const kindOf = (s) => (s.league === 'ncaa' ? 'college' : s.phase === 'pre' ? 'pre' : null);
+
 const GROUPS = [
   { key: 'nfl', label: 'NFL career', test: (s) => s.league === 'nfl' && s.phase !== 'pre' },
   { key: 'pre', label: 'NFL preseason', test: (s) => s.league === 'nfl' && s.phase === 'pre' },
@@ -125,8 +128,8 @@ function CareerTable({ career, position, onRefresh }) {
                   {s.phase === 'pre' && <span className="level pre"> Preseason</span>}
                 </td>
                 <td>{s.teams.join(' / ')}</td>
-                <td><Grade value={s.grade} /></td>
-                {gradeCols.map(([k]) => <td key={k}><Grade value={s.stats[k]} /></td>)}
+                <td><Grade value={s.grade} kind={kindOf(s)} /></td>
+                {gradeCols.map(([k]) => <td key={k}><Grade value={s.stats[k]} kind={kindOf(s)} /></td>)}
                 <td className="num">{s.snaps.toLocaleString()}</td>
                 {statCols.map(([k]) => <td key={k} className="num">{fmt(s.stats[k])}</td>)}
               </tr>
@@ -137,7 +140,7 @@ function CareerTable({ career, position, onRefresh }) {
               <tr key={t.key}>
                 <th>{t.label}</th>
                 <td>{t.seasons} season{t.seasons > 1 ? 's' : ''}</td>
-                <td><Grade value={t.grade} title="Weighted by snaps" /></td>
+                <td><Grade value={t.grade} title="Weighted by snaps" kind={t.key === 'pre' ? 'pre' : t.key === 'ncaa' ? 'college' : null} /></td>
                 {gradeCols.length > 0 && <td colSpan={gradeCols.length} />}
                 <td className="num">{t.snaps.toLocaleString()}</td>
                 {statCols.length > 0 && <td colSpan={statCols.length} />}

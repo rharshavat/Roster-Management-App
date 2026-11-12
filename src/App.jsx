@@ -154,6 +154,11 @@ export default function App() {
           {{ season: `PFF ${pff?.meta?.season ?? ''} regular season + playoffs.`, nfl: 'Career average (regular season + playoffs), weighted by snaps.', all: 'Includes college seasons — mainly for young players.', pre: 'Preseason-only career average, weighted by snaps.' }[teamMode]}
           {Object.keys(overrides).length > 0 && <> {Object.keys(overrides).length} player override{Object.keys(overrides).length > 1 ? 's' : ''} · <button className="link" onClick={clearOverrides}>reset</button></>}
         </span>
+        <span className="legend-grades" aria-label="Grade colours">
+          <span><span className="grade good">70.0</span> NFL</span>
+          <span><span className="grade good pre">70.0</span> Preseason</span>
+          <span><span className="grade good college">70.0</span> College</span>
+        </span>
         <span className="spacer" />
         {missingCareers > 0 && <span className="hint">{missingCareers} players have no career data yet.</span>}
         {api.canSync && <button onClick={() => syncCareers(false)} disabled={!!busy}>{busy === 'careers' ? 'Fetching careers…' : 'Sync careers'}</button>}

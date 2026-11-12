@@ -29,6 +29,9 @@
   --g-below: #c25a10;
   --g-poor: #b3261e;
   --g-text: #ffffff;
+  --g-pre: #6a4bbd;       /* preseason grades */
+  --g-college: #0f6f86;   /* college grades */
+  --pre-text: #5b3db0;
   --badge-gray: #6b7280;
   --ok-bg: #e6f4ea; --ok-fg: #1e5631;
   --info-bg: #e8eef9; --info-fg: #1d3a6e;
@@ -53,6 +56,7 @@
     --err-bg: #3b1715; --err-fg: #f3a79f; --warn-bg: #3a2810; --warn-fg: #f3c38a;
     --neutral-bg: #232b38; --neutral-fg: #c4cbd6; --danger-border: #6b2c27;
     --pressed-bg: #c83803; --pressed-fg: #ffffff;
+    --g-pre: #7b5fd4; --g-college: #17829b; --pre-text: #ab97f2;
     color-scheme: dark;
   }
 }
@@ -66,6 +70,7 @@
   --err-bg: #3b1715; --err-fg: #f3a79f; --warn-bg: #3a2810; --warn-fg: #f3c38a;
   --neutral-bg: #232b38; --neutral-fg: #c4cbd6; --danger-border: #6b2c27;
     --pressed-bg: #c83803; --pressed-fg: #ffffff;
+    --g-pre: #7b5fd4; --g-college: #17829b; --pre-text: #ab97f2;
   color-scheme: dark;
 }
 @media (max-width: 640px) { :root { --gutter: 16px; } }
@@ -212,17 +217,32 @@ tbody tr:last-child > * { border-bottom: 0; }
 .avail-P, .avail-FP { background: var(--g-high); }
 .avail-IR, .avail-PUP, .avail-NFI { background: var(--badge-gray); }
 
+/* Grade chip: the number, plus a small in-chip mark for career modes.
+   --gb is the PFF quality band; preseason and college chips swap the fill
+   for their own colour and keep the band as a stripe on the left. */
 .grade {
-  display: inline-block; min-width: 40px; text-align: center; border-radius: 4px;
-  font-size: 12px; font-weight: 700; color: var(--g-text); padding: 1px 5px; font-variant-numeric: tabular-nums;
+  display: inline-flex; align-items: baseline; justify-content: center; gap: 3px;
+  flex-shrink: 0; white-space: nowrap; min-width: 40px; border-radius: 4px;
+  font-size: 12px; font-weight: 700; line-height: 18px; color: var(--g-text);
+  padding: 0 5px; font-variant-numeric: tabular-nums;
+  background: var(--gb, transparent);
 }
-.grade.elite { background: var(--g-elite); }
-.grade.high { background: var(--g-high); }
-.grade.good { background: var(--g-good); }
-.grade.avg { background: var(--g-avg); }
-.grade.below { background: var(--g-below); }
-.grade.poor { background: var(--g-poor); }
+.grade.elite { --gb: var(--g-elite); }
+.grade.high { --gb: var(--g-high); }
+.grade.good { --gb: var(--g-good); }
+.grade.avg { --gb: var(--g-avg); }
+.grade.below { --gb: var(--g-below); }
+.grade.poor { --gb: var(--g-poor); }
 .grade.none { color: var(--muted); background: none; }
+.grade-mark {
+  font-size: 9px; font-weight: 800; letter-spacing: 0.02em; line-height: 1;
+  padding: 2px 3px; border-radius: 3px; background: rgb(0 0 0 / 0.22);
+}
+.grade.none .grade-mark { background: var(--hover); color: var(--muted); }
+.grade.pre:not(.none) { background: var(--g-pre); box-shadow: inset 4px 0 0 var(--gb); padding-left: 8px; }
+.grade.college:not(.none) { background: var(--g-college); box-shadow: inset 4px 0 0 var(--gb); padding-left: 8px; }
+.legend-grades { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: 12px; color: var(--muted); }
+.legend-grades span { display: inline-flex; align-items: center; gap: 4px; }
 
 .roster-table th { padding: 0; }
 .roster-table th button.sort { background: none; border: 0; color: inherit; padding: 8px 10px; width: 100%; text-align: left; font-weight: 600; white-space: nowrap; border-radius: 0; }
@@ -323,9 +343,6 @@ tbody tr:last-child > * { border-bottom: 0; }
 }
 .grade-mode .hint { margin: 0; }
 .grade-mode-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-.grade.career { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--g-text) 55%, transparent); }
-.grade sup { font-size: 9px; margin-left: 2px; opacity: 0.9; }
-.grade.none sup { color: var(--muted); }
 .grade-cell { white-space: nowrap; }
 .mode-toggle {
   margin-left: 6px; padding: 0 6px; font-size: 11px; line-height: 18px; color: var(--muted);
@@ -350,7 +367,7 @@ tbody tr:last-child > * { border-bottom: 0; }
 .career-table tfoot th, .career-table tfoot td { background: var(--hover); font-weight: 600; border-top: 2px solid var(--border); }
 .career-table tfoot th { color: var(--ink); }
 .career-table tr.preseason td { color: var(--muted); font-style: italic; }
-.career-table .level.pre { color: var(--g-below); }
+.career-table .level.pre { color: var(--pre-text); }
 .check.small { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; margin: 4px 0 8px; }
 .mode-cards { grid-template-columns: repeat(4, 1fr); }
 @media (max-width: 640px) { .mode-cards { grid-template-columns: 1fr 1fr; } }
