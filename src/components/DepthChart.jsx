@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import Grade from './Grade.jsx';
-import { AVAILABILITY, POSITIONS, RESERVE_STATUSES, TAGS, UNITS, describeAcquisition, headline } from '../lib.js';
+import { AVAILABILITY, POSITIONS, RESERVE_STATUSES, TAGS, UNITS, describeAcquisition } from '../lib.js';
 
-export default function DepthChart({ roster, pff, onChange, onSelect }) {
+export default function DepthChart({ roster, grades, onChange, onSelect }) {
   const [editing, setEditing] = useState(false);
   const byId = Object.fromEntries(roster.players.map((p) => [p.id, p]));
 
@@ -45,7 +45,7 @@ export default function DepthChart({ roster, pff, onChange, onSelect }) {
                         <td key={i}>
                           {id && (
                             <PlayerChip
-                              player={byId[id]} pff={pff?.players?.[id]} onSelect={onSelect}
+                              player={byId[id]} grade={grades[id]} onSelect={onSelect}
                               controls={editing && (
                                 <span className="chip-controls">
                                   <button title="Move up the depth chart" disabled={i === 0} onClick={() => move(key, idx, i, i - 1)}>◀</button>
@@ -74,12 +74,12 @@ export default function DepthChart({ roster, pff, onChange, onSelect }) {
 
       <section className="unit">
         <h2>Practice squad <small>{ps.length}/17</small></h2>
-        <GroupedList players={ps} pff={pff} onSelect={onSelect} />
+        <GroupedList players={ps} grades={grades} onSelect={onSelect} />
       </section>
 
       <section className="unit">
         <h2>Reserves <small>{reserves.length}</small></h2>
-        <GroupedList players={reserves} pff={pff} onSelect={onSelect} groupBy="status" />
+        <GroupedList players={reserves} grades={grades} onSelect={onSelect} groupBy="status" />
       </section>
     </div>
   );
@@ -87,9 +87,8 @@ export default function DepthChart({ roster, pff, onChange, onSelect }) {
 
 function slotOverflow(slots) { return slots.some((s) => s.players.length > 3); }
 
-function PlayerChip({ player, pff, onSelect, controls }) {
+function PlayerChip({ player, grade: h = {}, onSelect, controls }) {
   if (!player) return null;
-  const h = headline(pff, player);
   return (
     <div className={`chip tag-${player.tag ?? 'none'}`}>
       <button className="chip-main" onClick={() => onSelect(player.id)} title={[TAGS[player.tag], describeAcquisition(player.acquisition)].filter(Boolean).join(' · ')}>
@@ -97,7 +96,7 @@ function PlayerChip({ player, pff, onSelect, controls }) {
         <span className="name">{player.name}</span>
         {player.acquisition && <span className="acq">{player.acquisition}</span>}
         {player.availability && <span className={`avail avail-${player.availability}`} title={AVAILABILITY[player.availability]}>{player.availability}</span>}
-        <Grade value={h.grade} rank={h.rank} of={h.of} title={h.label} />
+        <Grade value={h.grade} rank={h.rank} of={h.of} title={h.label} mode={h.mode} />
       </button>
       {controls}
     </div>
@@ -118,7 +117,7 @@ function AddToSlot({ roster, exclude, onAdd }) {
   );
 }
 
-function GroupedList({ players, pff, onSelect, groupBy = 'position' }) {
+function GroupedList({ players, grades, onSelect, groupBy = 'position' }) {
   if (!players.length) return <p className="hint">None.</p>;
   const groups = {};
   for (const p of players) (groups[groupBy === 'status' ? p.status.replace('_', ' ') : p.position] ??= []).push(p);
@@ -135,7 +134,7 @@ function GroupedList({ players, pff, onSelect, groupBy = 'position' }) {
               <td className="chips">
                 {groups[k].map((p) => (
                   <span key={p.id} className="chip-row-item">
-                    <PlayerChip player={p} pff={pff?.players?.[p.id]} onSelect={onSelect} />
+                    <PlayerChip player={p} grade={grades[p.id]} onSelect={onSelect} />
                     {groupBy === 'status' && <span className="pos-badge">{p.position}</span>}
                   </span>
                 ))}

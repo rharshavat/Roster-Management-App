@@ -21,16 +21,28 @@ function authHeader() {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function pffGet(pathname, params = {}, attempts = 4) {
+// PFF enforces a per-minute read budget. When one request is told to wait,
+// every request waits, so parallel fetches don't keep hitting the limit.
+let pausedUntil = 0;
+
+export async function pffGet(pathname, params = {}, attempts = 4) {
   const url = new URL(pathname, BASE);
   for (const [k, v] of Object.entries(params)) if (v != null) url.searchParams.set(k, v);
   let res;
-  for (let i = 1; ; i++) {
+  let rateLimited = 0;
+  for (let i = 1; ; ) {
+    if (pausedUntil > Date.now()) await sleep(pausedUntil - Date.now());
     res = await fetch(url, { headers: { Authorization: authHeader(), Accept: 'application/json' } });
-    // Reports are slow upstream; transient 429/5xx are worth a retry.
-    if (![429, 500, 502, 503, 504].includes(res.status) || i >= attempts) break;
+    if (res.status === 429 && rateLimited++ < 10) {
+      const wait = Math.min(Number(res.headers.get('retry-after')) || 20, 90) * 1000;
+      pausedUntil = Math.max(pausedUntil, Date.now() + wait);
+      await res.arrayBuffer();
+      continue;
+    }
+    // Reports are slow upstream; transient 5xx are worth a retry.
+    if (![500, 502, 503, 504].includes(res.status) || i >= attempts) break;
     await res.arrayBuffer();
-    await sleep(1000 * 2 ** i);
+    await sleep(1000 * 2 ** i++);
   }
   const body = await res.text();
   if (!res.ok) {
@@ -151,7 +163,7 @@ export async function syncPff({ log = console.log } = {}) {
   return meta;
 }
 
-async function readCache(name) {
+export async function readCache(name) {
   try { return JSON.parse(await readFile(path.join(CACHE_DIR, `${name}.json`), 'utf8')); }
   catch { return null; }
 }

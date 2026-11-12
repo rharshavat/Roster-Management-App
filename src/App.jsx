@@ -3,7 +3,7 @@ import DepthChart from './components/DepthChart.jsx';
 import RosterTable from './components/RosterTable.jsx';
 import PlayerPanel from './components/PlayerPanel.jsx';
 import Compare from './components/Compare.jsx';
-import { RESERVE_STATUSES } from './lib.js';
+import { GRADE_MODES, RESERVE_STATUSES, gradeFor, loadPref, savePref } from './lib.js';
 
 export default function App() {
   const [saved, setSaved] = useState(null); // last roster from server
@@ -13,6 +13,20 @@ export default function App() {
   const [selected, setSelected] = useState(null); // player id or 'new'
   const [busy, setBusy] = useState('');
   const [message, setMessage] = useState(null);
+  const [careers, setCareers] = useState({});
+  // How grades are shown: team-wide mode plus per-player overrides (this browser only).
+  const [teamMode, setTeamModeState] = useState(() => loadPref('gradeMode', 'season'));
+  const [overrides, setOverridesState] = useState(() => loadPref('gradeOverrides', {}));
+  const setTeamMode = (m) => { setTeamModeState(m); savePref('gradeMode', m); };
+  const setOverride = useCallback((id, m) => {
+    setOverridesState((o) => {
+      const next = { ...o };
+      if (m == null) delete next[id]; else next[id] = m;
+      savePref('gradeOverrides', next);
+      return next;
+    });
+  }, []);
+  const clearOverrides = () => { setOverridesState({}); savePref('gradeOverrides', {}); };
 
   const load = useCallback(async () => {
     const res = await fetch('/api/roster');
@@ -21,9 +35,43 @@ export default function App() {
     setSaved(data.roster);
     setRoster(data.roster);
     setPff(data.pff);
+    const c = await fetch('/api/careers');
+    if (c.ok) setCareers(await c.json());
   }, []);
 
   useEffect(() => { load().catch((e) => setMessage({ type: 'error', text: e.message })); }, [load]);
+
+  const grades = useMemo(() => {
+    const out = {};
+    for (const p of roster?.players ?? []) {
+      out[p.id] = gradeFor(overrides[p.id] ?? teamMode, p, pff?.players?.[p.id], careers[p.id]);
+    }
+    return out;
+  }, [roster, pff, careers, teamMode, overrides]);
+
+  const missingCareers = useMemo(
+    () => (roster?.players ?? []).filter((p) => (overrides[p.id] ?? teamMode) !== 'season' && !careers[p.id]).length,
+    [roster, careers, teamMode, overrides],
+  );
+
+  async function syncCareers(force = false) {
+    setBusy('careers');
+    setMessage({ type: 'info', text: 'Fetching career history from PFF… PFF limits reads per minute, so a full refresh can take a few minutes.' });
+    try {
+      const res = await fetch('/api/careers/sync', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ force }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setCareers(data.careers);
+      setMessage({
+        type: data.failed.length ? 'info' : 'ok',
+        text: `Career history: ${data.fetched} fetched, ${data.upToDate} already up to date.${data.failed.length ? ` Failed: ${data.failed.join('; ')}` : ''}`,
+      });
+    } catch (e) {
+      setMessage({ type: 'error', text: `Career sync failed: ${e.message}` });
+    } finally { setBusy(''); }
+  }
 
   const dirty = useMemo(() => roster && saved && JSON.stringify(roster) !== JSON.stringify(saved), [roster, saved]);
 
@@ -101,6 +149,22 @@ export default function App() {
         </div>
       </section>
 
+      <section className="grade-mode">
+        <span className="grade-mode-label">Grades</span>
+        <div className="segmented" role="group" aria-label="Grade shown for the whole team">
+          {Object.entries(GRADE_MODES).map(([k, m]) => (
+            <button key={k} aria-pressed={teamMode === k} onClick={() => setTeamMode(k)}>{m.label}</button>
+          ))}
+        </div>
+        <span className="hint">
+          {teamMode === 'season' ? `PFF ${pff?.meta?.season ?? ''} season grade.` : 'Career average, weighted by snaps.'}
+          {Object.keys(overrides).length > 0 && <> {Object.keys(overrides).length} player override{Object.keys(overrides).length > 1 ? 's' : ''} · <button className="link" onClick={clearOverrides}>reset</button></>}
+        </span>
+        <span className="spacer" />
+        {missingCareers > 0 && <span className="hint">{missingCareers} players have no career data yet.</span>}
+        <button onClick={() => syncCareers(false)} disabled={!!busy}>{busy === 'careers' ? 'Fetching careers…' : 'Sync careers'}</button>
+      </section>
+
       {message && (
         <p className={`msg ${message.type}`} role="status">
           {message.text} <button className="link" onClick={() => setMessage(null)}>Dismiss</button>
@@ -114,9 +178,9 @@ export default function App() {
       </nav>
 
       <main>
-        {tab === 'depth' && <DepthChart roster={roster} pff={pff} onChange={setRoster} onSelect={setSelected} />}
-        {tab === 'roster' && <RosterTable roster={roster} pff={pff} onSelect={setSelected} />}
-        {tab === 'compare' && <Compare roster={roster} pff={pff} onSelect={setSelected} />}
+        {tab === 'depth' && <DepthChart roster={roster} pff={pff} grades={grades} onChange={setRoster} onSelect={setSelected} />}
+        {tab === 'roster' && <RosterTable roster={roster} pff={pff} grades={grades} overrides={overrides} teamMode={teamMode} onOverride={setOverride} onSelect={setSelected} />}
+        {tab === 'compare' && <Compare roster={roster} pff={pff} grades={grades} teamMode={teamMode} onSelect={setSelected} />}
       </main>
 
       {selected && (
@@ -125,6 +189,10 @@ export default function App() {
           roster={roster}
           pff={pff}
           playerId={selected}
+          teamMode={teamMode}
+          override={overrides[selected]}
+          onOverride={setOverride}
+          onCareerLoaded={(id, c) => setCareers((cs) => ({ ...cs, [id]: c }))}
           onChange={setRoster}
           onClose={() => setSelected(null)}
         />

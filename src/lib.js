@@ -108,3 +108,40 @@ export function removeFromDepth(roster, id) {
   }
   return { ...roster, depthChart };
 }
+
+// ---- Grade modes: this season vs snap-weighted career averages ----
+
+export const GRADE_MODES = {
+  season: { label: 'This season', short: 'Season', mark: '' },
+  nfl: { label: 'NFL career', short: 'NFL', mark: 'C' },
+  all: { label: 'NFL + college', short: 'NFL+Col', mark: 'C+' },
+};
+
+// Snap-weighted average grade across seasons: Σ(grade × snaps) / Σ snaps.
+export function careerGrade(career, mode) {
+  if (!career) return { grade: null, snaps: null, missing: true };
+  const rows = career.seasons.filter((s) => (mode === 'all' || s.league === 'nfl') && s.grade != null && s.snaps > 0);
+  const snaps = rows.reduce((t, s) => t + s.snaps, 0);
+  if (!snaps) return { grade: null, snaps: 0, label: `${GRADE_MODES[mode].label}: no graded snaps` };
+  const grade = rows.reduce((t, s) => t + s.grade * s.snaps, 0) / snaps;
+  const years = rows.map((s) => s.season);
+  const span = `${Math.min(...years)}–${Math.max(...years)}`;
+  return {
+    grade, snaps, seasons: rows.length,
+    label: `${GRADE_MODES[mode].label} ${career.gradeLabel.toLowerCase()}: ${snaps.toLocaleString()} snaps, ${rows.length} seasons (${span})`,
+  };
+}
+
+// The grade to display for one player under a mode.
+export function gradeFor(mode, player, pffPlayer, career) {
+  if (mode === 'season') return { ...headline(pffPlayer, player), mode };
+  return { ...careerGrade(career, mode), mode };
+}
+
+// Per-viewer preferences; storage can be unavailable, so never let it throw.
+export function loadPref(key, fallback) {
+  try { const v = localStorage.getItem(key); return v == null ? fallback : JSON.parse(v); } catch { return fallback; }
+}
+export function savePref(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}

@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import Grade from './Grade.jsx';
-import { POSITIONS, RESERVE_STATUSES, STATUS_LABELS, TAGS, age, depthSlots, describeAcquisition, formatHeight, headline } from '../lib.js';
+import { GRADE_MODES, POSITIONS, RESERVE_STATUSES, STATUS_LABELS, TAGS, age, depthSlots, describeAcquisition, formatHeight } from '../lib.js';
+
+const MODE_CYCLE = [null, 'season', 'nfl', 'all']; // null = follow the team setting
 
 const FILTERS = [
   { key: 'all', label: 'All', test: () => true },
@@ -19,11 +21,11 @@ const COLUMNS = [
   { key: 'age', label: 'Age', value: (r) => r.age ?? 99 },
   { key: 'size', label: 'Ht / Wt', value: (r) => r.bio?.height ?? 0 },
   { key: 'college', label: 'College', value: (r) => r.bio?.college ?? '' },
-  { key: 'grade', label: 'PFF', value: (r) => r.h.grade ?? -1 },
+  { key: 'grade', label: 'PFF grade', value: (r) => r.h.grade ?? -1 },
   { key: 'snaps', label: 'Snaps', value: (r) => r.h.snaps ?? -1 },
 ];
 
-export default function RosterTable({ roster, pff, onSelect }) {
+export default function RosterTable({ roster, pff, grades, overrides, teamMode, onOverride, onSelect }) {
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [pos, setPos] = useState('');
@@ -37,13 +39,13 @@ export default function RosterTable({ roster, pff, onSelect }) {
       .filter((p) => test(p) && (!pos || p.position === pos) && (!q || p.name.toLowerCase().includes(q) || p.jersey === q))
       .map((p) => {
         const d = pff?.players?.[p.id];
-        return { p, bio: d?.bio, h: headline(d, p), age: age(d?.bio?.dob), slots: depthSlots(roster, p.id) };
+        return { p, bio: d?.bio, h: grades[p.id] ?? {}, age: age(d?.bio?.dob), slots: depthSlots(roster, p.id) };
       })
       .sort((a, b) => {
         const va = col.value(a), vb = col.value(b);
         return (va < vb ? -1 : va > vb ? 1 : 0) * sort.dir || a.p.name.localeCompare(b.p.name);
       });
-  }, [roster, pff, filter, query, pos, sort]);
+  }, [roster, pff, grades, filter, query, pos, sort]);
 
   const positions = [...new Set(roster.players.map((p) => p.position))].sort((a, b) => POSITIONS.indexOf(a) - POSITIONS.indexOf(b));
 
@@ -94,7 +96,18 @@ export default function RosterTable({ roster, pff, onSelect }) {
                 <td className="num">{a ?? ''}</td>
                 <td>{bio ? `${formatHeight(bio.height)} / ${bio.weight ?? ''}` : ''}</td>
                 <td>{bio?.college?.replace(/\s+\S+$/, '') ?? ''}</td>
-                <td><Grade value={h.grade} rank={h.rank} of={h.of} title={h.label} /></td>
+                <td className="grade-cell">
+                  <Grade value={h.grade} rank={h.rank} of={h.of} title={h.label} mode={h.mode} />
+                  <button
+                    className={`mode-toggle${overrides[p.id] ? ' on' : ''}`}
+                    title={`Grade for this player: ${overrides[p.id] ? GRADE_MODES[overrides[p.id]].label : `team setting (${GRADE_MODES[teamMode].label})`}. Click to change.`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const i = MODE_CYCLE.indexOf(overrides[p.id] ?? null);
+                      onOverride(p.id, MODE_CYCLE[(i + 1) % MODE_CYCLE.length]);
+                    }}
+                  >{overrides[p.id] ? GRADE_MODES[overrides[p.id]].short : 'Team'}</button>
+                </td>
                 <td className="num">{h.snaps ?? ''}</td>
               </tr>
             ))}

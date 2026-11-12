@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import Grade from './Grade.jsx';
-import { STATUS_LABELS, depthSlots, headline } from '../lib.js';
+import { GRADE_MODES, STATUS_LABELS, depthSlots } from '../lib.js';
 
 // Our (Ourlads) slot names → PFF depth-chart alignments.
 const SLOT_MAP = {
@@ -11,9 +11,9 @@ const SLOT_MAP = {
 };
 const GRADE_GAP = 5; // a backup this many points better than the starter gets flagged
 
-export default function Compare({ roster, pff, onSelect }) {
+export default function Compare({ roster, pff, grades, teamMode, onSelect }) {
   const [onlyDiffs, setOnlyDiffs] = useState(false);
-  const analysis = useMemo(() => analyse(roster, pff), [roster, pff]);
+  const analysis = useMemo(() => analyse(roster, pff, grades), [roster, pff, grades]);
 
   if (!pff?.depthChart?.length) {
     return <p className="hint">No PFF depth chart yet. Press “Sync PFF” first.</p>;
@@ -28,7 +28,7 @@ export default function Compare({ roster, pff, onSelect }) {
         <p className="hint" style={{ margin: 0 }}>
           Your depth chart compared with PFF's ({pff.meta?.season}, synced {new Date(pff.meta?.syncedAt).toLocaleDateString()}).
           {' '}<b>{differing}</b> of {total.length} positions differ.
-          {' '}Grades flag a backup who outgrades the starter by {GRADE_GAP}+ points.
+          {' '}Grades flag a backup who outgrades the starter by {GRADE_GAP}+ points, using the grade setting above ({GRADE_MODES[teamMode].label.toLowerCase()}).
         </p>
         <label className="check"><input type="checkbox" checked={onlyDiffs} onChange={(e) => setOnlyDiffs(e.target.checked)} /> Only show differences</label>
       </div>
@@ -81,16 +81,16 @@ function Names({ list, onSelect, showSlot }) {
         <li key={`${n.key}-${i}`}>
           {n.ourId ? <button className="link" onClick={() => onSelect(n.ourId)}>{n.name}</button> : <span>{n.name}</span>}
           {showSlot && n.slot && <small className="muted"> {n.slot}</small>}
-          {' '}<Grade value={n.grade} title={n.gradeLabel} />
+          {' '}<Grade value={n.grade} title={n.gradeLabel} mode={n.mode} />
         </li>
       ))}
     </ol>
   );
 }
 
-function analyse(roster, pff) {
+function analyse(roster, pff, grades) {
   const byId = Object.fromEntries(roster.players.map((p) => [p.id, p]));
-  const gradeOf = (id) => (id ? headline(pff?.players?.[id], byId[id]) : {});
+  const gradeOf = (id) => (id ? grades[id] ?? {} : {});
   const rows = pff?.depthChart ?? [];
   const pffSlotsOf = (pffId) => rows.filter((r) => r.pffId === pffId).map((r) => `${r.alignment}${r.depthOrder}`);
   const whereOurs = (id) => {
@@ -126,11 +126,11 @@ function analyse(roster, pff) {
   function compareSlot(slot, alignments, ourIds, theirs) {
     const ours = ourIds.map((id) => {
       const g = gradeOf(id);
-      return { key: id, ourId: id, name: byId[id]?.name ?? id, grade: g.grade, gradeLabel: g.label };
+      return { key: id, ourId: id, name: byId[id]?.name ?? id, grade: g.grade, gradeLabel: g.label, mode: g.mode };
     });
     const theirsN = theirs.map((r) => {
-      const g = r.ourId ? gradeOf(r.ourId) : { grade: r.grade };
-      return { key: r.pffId, ourId: r.ourId, pffId: r.pffId, name: r.name, slot: `${r.alignment}${r.depthOrder}`, grade: g.grade ?? r.grade, gradeLabel: g.label };
+      const g = r.ourId ? gradeOf(r.ourId) : { grade: r.grade, mode: 'season' };
+      return { key: r.pffId, ourId: r.ourId, pffId: r.pffId, name: r.name, slot: `${r.alignment}${r.depthOrder}`, grade: g.grade, gradeLabel: g.label, mode: g.mode };
     });
     const flags = [];
     if (alignments.length && ours.length) {
