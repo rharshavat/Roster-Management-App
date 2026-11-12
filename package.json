@@ -1,0 +1,26 @@
+{
+  "name": "roster-management-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Manage the Chicago Bears depth chart and roster, enriched with PFF data.",
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,magenta \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "node --watch server/index.js",
+    "dev:web": "vite",
+    "build": "vite build",
+    "start": "node server/index.js",
+    "sync:pff": "node scripts/sync-pff.js"
+  },
+  "dependencies": {
+    "express": "^5.3.0",
+    "undici": "^8.12.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.3.0",
+    "concurrently": "^10.0.7",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "vite": "^8.3.8"
+  }
+}
