@@ -7,7 +7,17 @@ import { CACHE_DIR } from './store.js';
 
 const CAREER_DIR = path.join(CACHE_DIR, 'career');
 const STALE_MS = 24 * 60 * 60 * 1000;
-const LEAGUES = ['nfl', 'ncaa'];
+const VERSION = 2; // v2: NFL regular/postseason and preseason fetched separately
+
+// PFF week ids. Unfiltered career rows mix preseason in, so NFL history is
+// fetched twice: regular + postseason, and preseason on its own.
+const NFL_REG_WEEKS = [...Array.from({ length: 18 }, (_, i) => i + 1), 28, 29, 30, 32].join(',');
+const NFL_PRE_WEEKS = '-1,-2,-3,-4,-5';
+const PHASES = [
+  { league: 'nfl', phase: 'reg', week: NFL_REG_WEEKS },
+  { league: 'nfl', phase: 'pre', week: NFL_PRE_WEEKS },
+  { league: 'ncaa', phase: 'reg', week: null }, // college has no preseason
+];
 
 // What each position is graded on. `primary` gives the season grade and the
 // snaps it is weighted by; `detail` adds position stats for the career table.
@@ -54,8 +64,8 @@ async function teamName(league, id) {
   return league === 'nfl' ? t.abbr : t.city ?? t.abbr;
 }
 
-async function fetchReport(report, league, pffId) {
-  const data = await pffGet(`/v1/player/${report}`, { league, player_id: pffId, career: 'true' }, 3);
+async function fetchReport(report, league, pffId, week) {
+  const data = await pffGet(`/v1/player/${report}`, { league, player_id: pffId, career: 'true', week }, 3);
   const body = Object.values(data)[0] ?? {};
   return body.seasons ?? [];
 }
@@ -65,12 +75,12 @@ export async function fetchCareer(player, pffId, pffPosition) {
   const unit = UNITS[unitKey];
   const detailReports = unit.detail ?? DETAIL_BY_POSITION[player.position] ?? DETAIL_BY_POSITION[pffPosition] ?? [];
   const seasons = [];
-  for (const league of LEAGUES) {
-    const primary = await fetchReport(unit.primary, league, pffId);
+  for (const { league, phase, week } of PHASES) {
+    const primary = await fetchReport(unit.primary, league, pffId, week);
     if (!primary.length) continue;
     const details = {};
     for (const r of detailReports) {
-      details[r] = new Map((await fetchReport(r, league, pffId)).map((row) => [row.season, row]));
+      details[r] = new Map((await fetchReport(r, league, pffId, week)).map((row) => [row.season, row]));
     }
     for (const row of primary) {
       const snaps = unit.snaps(row) ?? 0;
@@ -80,11 +90,12 @@ export async function fetchCareer(player, pffId, pffPosition) {
       const stats = { ...row };
       for (const [r, byYear] of Object.entries(details)) Object.assign(stats, byYear.get(row.season) ?? {});
       delete stats.franchise_id; delete stats.season_id;
-      seasons.push({ league, season: row.season, teams, snaps, grade, stats });
+      seasons.push({ league, phase, season: row.season, teams, snaps, grade, stats });
     }
   }
-  seasons.sort((a, b) => b.season - a.season || (a.league === 'nfl' ? -1 : 1));
-  return { pffId, unit: unitKey, gradeLabel: unit.label, fetchedAt: new Date().toISOString(), seasons };
+  const order = (s) => (s.league === 'nfl' ? (s.phase === 'reg' ? 0 : 1) : 2);
+  seasons.sort((a, b) => b.season - a.season || order(a) - order(b));
+  return { version: VERSION, pffId, unit: unitKey, gradeLabel: unit.label, fetchedAt: new Date().toISOString(), seasons };
 }
 
 const careerFile = (id) => path.join(CAREER_DIR, `${id}.json`);
@@ -97,7 +108,7 @@ export async function readCareer(id) {
 export function compactCareer(c) {
   return c && {
     unit: c.unit, gradeLabel: c.gradeLabel, fetchedAt: c.fetchedAt,
-    seasons: c.seasons.map(({ league, season, teams, snaps, grade }) => ({ league, season, teams, snaps, grade })),
+    seasons: c.seasons.map(({ league, phase, season, teams, snaps, grade }) => ({ league, phase, season, teams, snaps, grade })),
   };
 }
 
@@ -119,7 +130,7 @@ export async function syncCareers(roster, { ids, force = false, log = () => {} }
   for (const p of wanted) {
     const existing = force ? null : await readCareer(p.id);
     const pos = p.position;
-    const stale = !existing || Date.now() - Date.parse(existing.fetchedAt) > STALE_MS || existing.unit !== unitFor(pos);
+    const stale = !existing || existing.version !== VERSION || Date.now() - Date.parse(existing.fetchedAt) > STALE_MS || existing.unit !== unitFor(pos);
     if (stale) todo.push(p);
   }
   const failed = [];

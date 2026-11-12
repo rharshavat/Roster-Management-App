@@ -288,3 +288,8 @@ tbody tr:last-child > * { border-bottom: 0; }
   .grade-mode { margin-left: 16px; margin-right: 16px; }
   .mode-cards { grid-template-columns: 1fr; }
 }
+.career-table tr.preseason td { color: var(--muted); font-style: italic; }
+.career-table .level.pre { color: var(--g-below); }
+.check.small { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; margin: 4px 0 8px; }
+.mode-cards { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 640px) { .mode-cards { grid-template-columns: 1fr 1fr; } }

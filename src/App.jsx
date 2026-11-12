@@ -157,7 +157,7 @@ export default function App() {
           ))}
         </div>
         <span className="hint">
-          {teamMode === 'season' ? `PFF ${pff?.meta?.season ?? ''} season grade.` : 'Career average, weighted by snaps.'}
+          {{ season: `PFF ${pff?.meta?.season ?? ''} regular season + playoffs.`, nfl: 'Career average (regular season + playoffs), weighted by snaps.', all: 'Includes college seasons — mainly for young players.', pre: 'Preseason-only career average, weighted by snaps.' }[teamMode]}
           {Object.keys(overrides).length > 0 && <> {Object.keys(overrides).length} player override{Object.keys(overrides).length > 1 ? 's' : ''} · <button className="link" onClick={clearOverrides}>reset</button></>}
         </span>
         <span className="spacer" />

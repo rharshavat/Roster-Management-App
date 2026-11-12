@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import Grade from './Grade.jsx';
 import { GRADE_MODES, POSITIONS, RESERVE_STATUSES, STATUS_LABELS, TAGS, age, depthSlots, describeAcquisition, formatHeight } from '../lib.js';
 
-const MODE_CYCLE = [null, 'season', 'nfl', 'all']; // null = follow the team setting
+const MODE_CYCLE = [null, 'season', 'nfl', 'all', 'pre']; // null = follow the team setting
 
 const FILTERS = [
   { key: 'all', label: 'All', test: () => true },

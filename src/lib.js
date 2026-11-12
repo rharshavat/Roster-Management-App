@@ -115,12 +115,21 @@ export const GRADE_MODES = {
   season: { label: 'This season', short: 'Season', mark: '' },
   nfl: { label: 'NFL career', short: 'NFL', mark: 'C' },
   all: { label: 'NFL + college', short: 'NFL+Col', mark: 'C+' },
+  pre: { label: 'NFL preseason', short: 'Pre', mark: 'P' },
+};
+
+// Which career seasons each mode averages. NFL seasons are regular season +
+// playoffs ('reg') or preseason ('pre'); college seasons are all 'reg'.
+const IN_MODE = {
+  nfl: (s) => s.league === 'nfl' && s.phase !== 'pre',
+  all: (s) => s.phase !== 'pre',
+  pre: (s) => s.league === 'nfl' && s.phase === 'pre',
 };
 
 // Snap-weighted average grade across seasons: Σ(grade × snaps) / Σ snaps.
 export function careerGrade(career, mode) {
   if (!career) return { grade: null, snaps: null, missing: true };
-  const rows = career.seasons.filter((s) => (mode === 'all' || s.league === 'nfl') && s.grade != null && s.snaps > 0);
+  const rows = career.seasons.filter((s) => IN_MODE[mode](s) && s.grade != null && s.snaps > 0);
   const snaps = rows.reduce((t, s) => t + s.snaps, 0);
   if (!snaps) return { grade: null, snaps: 0, label: `${GRADE_MODES[mode].label}: no graded snaps` };
   const grade = rows.reduce((t, s) => t + s.grade * s.snaps, 0) / snaps;

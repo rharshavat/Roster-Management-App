@@ -35,7 +35,7 @@ export default function CareerSection({ player, seasonGrade, teamMode, override,
       setState({ data });
       onCareerLoaded?.(player.id, {
         unit: data.unit, gradeLabel: data.gradeLabel, fetchedAt: data.fetchedAt,
-        seasons: data.seasons.map(({ league, season, teams, snaps, grade }) => ({ league, season, teams, snaps, grade })),
+        seasons: data.seasons.map(({ league, phase, season, teams, snaps, grade }) => ({ league, phase, season, teams, snaps, grade })),
       });
     } catch (e) {
       setState({ error: e.message });
@@ -49,6 +49,7 @@ export default function CareerSection({ player, seasonGrade, teamMode, override,
     season: seasonGrade,
     nfl: career ? careerGrade(career, 'nfl') : {},
     all: career ? careerGrade(career, 'all') : {},
+    pre: career ? careerGrade(career, 'pre') : {},
   };
   const active = override ?? teamMode;
 
@@ -66,7 +67,7 @@ export default function CareerSection({ player, seasonGrade, teamMode, override,
       <p className="hint">
         Shown across the app: <b>{GRADE_MODES[active].label}</b>
         {override ? <> (set for this player · <button className="link" onClick={() => onOverride(player.id, null)}>use team setting</button>)</> : ' (team setting)'}.
-        Career grades are averages weighted by snaps.
+        Career grades are averages weighted by snaps; NFL career excludes preseason.
       </p>
 
       {state.loading && <p className="hint">Loading career history…</p>}
@@ -78,25 +79,34 @@ export default function CareerSection({ player, seasonGrade, teamMode, override,
   );
 }
 
+const GROUPS = [
+  { key: 'nfl', label: 'NFL career', test: (s) => s.league === 'nfl' && s.phase !== 'pre' },
+  { key: 'pre', label: 'NFL preseason', test: (s) => s.league === 'nfl' && s.phase === 'pre' },
+  { key: 'ncaa', label: 'College', test: (s) => s.league === 'ncaa' },
+];
+
+function weighted(rows) {
+  const graded = rows.filter((s) => s.grade != null && s.snaps > 0);
+  const snaps = graded.reduce((t, s) => t + s.snaps, 0);
+  return snaps ? graded.reduce((t, s) => t + s.grade * s.snaps, 0) / snaps : null;
+}
+
 function CareerTable({ career, position, onRefresh }) {
-  const cols = columnsFor(career, position).filter(([k]) => career.seasons.some((s) => s.stats[k] != null));
-  const totals = (league) => {
-    const rows = career.seasons.filter((s) => s.league === league);
+  const [showPre, setShowPre] = useState(false);
+  const hasPre = career.seasons.some((s) => s.phase === 'pre');
+  const seasons = career.seasons.filter((s) => showPre || s.phase !== 'pre');
+  const cols = columnsFor(career, position).filter(([k]) => seasons.some((s) => s.stats[k] != null));
+  const summary = GROUPS.filter((g) => g.key !== 'pre' || showPre).map((g) => {
+    const rows = career.seasons.filter(g.test);
     if (!rows.length) return null;
-    const g = careerGrade(career, league === 'nfl' ? 'nfl' : 'all');
-    // NCAA-only weighted grade for the college row.
-    const col = rows.filter((s) => s.grade != null && s.snaps > 0);
-    const colSnaps = col.reduce((t, s) => t + s.snaps, 0);
-    return {
-      league, seasons: rows.length,
-      snaps: rows.reduce((t, s) => t + s.snaps, 0),
-      grade: league === 'nfl' ? g.grade : colSnaps ? col.reduce((t, s) => t + s.grade * s.snaps, 0) / colSnaps : null,
-    };
-  };
-  const summary = [totals('nfl'), totals('ncaa')].filter(Boolean);
+    return { ...g, seasons: rows.length, snaps: rows.reduce((t, s) => t + s.snaps, 0), grade: weighted(rows) };
+  }).filter(Boolean);
 
   return (
     <>
+      {hasPre && (
+        <label className="check small"><input type="checkbox" checked={showPre} onChange={(e) => setShowPre(e.target.checked)} /> Show preseason</label>
+      )}
       <div className="table-wrap">
         <table className="career-table">
           <thead>
@@ -106,9 +116,13 @@ function CareerTable({ career, position, onRefresh }) {
             </tr>
           </thead>
           <tbody>
-            {career.seasons.map((s) => (
-              <tr key={`${s.league}-${s.season}`} className={s.league === 'ncaa' ? 'college' : ''}>
-                <td>{s.season}{s.league === 'ncaa' && <span className="level"> College</span>}</td>
+            {seasons.map((s) => (
+              <tr key={`${s.league}-${s.phase}-${s.season}`} className={s.league === 'ncaa' ? 'college' : s.phase === 'pre' ? 'preseason' : ''}>
+                <td>
+                  {s.season}
+                  {s.league === 'ncaa' && <span className="level"> College</span>}
+                  {s.phase === 'pre' && <span className="level pre"> Preseason</span>}
+                </td>
                 <td>{s.teams.join(' / ')}</td>
                 <td className="num">{s.snaps.toLocaleString()}</td>
                 <td><Grade value={s.grade} /></td>
@@ -120,8 +134,8 @@ function CareerTable({ career, position, onRefresh }) {
           </tbody>
           <tfoot>
             {summary.map((t) => (
-              <tr key={t.league}>
-                <th>{t.league === 'nfl' ? 'NFL career' : 'College'}</th>
+              <tr key={t.key}>
+                <th>{t.label}</th>
                 <td>{t.seasons} season{t.seasons > 1 ? 's' : ''}</td>
                 <td className="num">{t.snaps.toLocaleString()}</td>
                 <td><Grade value={t.grade} title="Weighted by snaps" /></td>
