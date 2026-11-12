@@ -194,7 +194,10 @@ tbody tr:last-child > * { border-bottom: 0; }
 .depth-table tbody th { width: 64px; color: var(--ink); font-weight: 700; }
 .depth-table td { min-width: 220px; }
 .depth-table td.chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip-row-item { display: inline-flex; align-items: center; gap: 4px; }
+.chip-row-item { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.chip-row-item .pos-badge { padding-left: 34px; }
+.chip-row-item .move-select { margin-left: 30px; margin-bottom: 4px; }
+.depth-table td.chips { min-width: 0; flex-direction: column; align-items: flex-start; gap: 4px; }
 .pos-badge { font-size: 11px; color: var(--muted); }
 
 .chip { display: inline-flex; align-items: center; gap: 4px; }
@@ -266,9 +269,18 @@ tbody tr:last-child > * { border-bottom: 0; }
 }
 .panel-head {
   display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
-  padding: 18px 20px; background: var(--band); color: var(--on-band); border-bottom: 4px solid var(--c);
-  position: sticky; top: 0; z-index: 1;
+  padding: 6px 20px 18px; background: var(--band); color: var(--on-band); border-bottom: 4px solid var(--c);
 }
+.panel-nav {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: center; padding: 8px 12px;
+  background: var(--band); border-bottom: 1px solid var(--band-border);
+}
+.panel-nav .back {
+  background: none; border: 0; color: var(--on-band); font-weight: 600; font-size: 15px;
+  padding: 6px 8px; border-radius: 6px;
+}
+.panel-nav .back:hover { background: var(--band-border); }
 .panel-head h2 { margin: 0; font-size: 20px; }
 .panel-head .jersey { color: var(--on-band-muted); }
 .panel-head .sub { margin: 4px 0 0; color: var(--on-band-muted); font-size: 13px; }
@@ -323,7 +335,8 @@ tbody tr:last-child > * { border-bottom: 0; }
 .compare-table tbody th small { display: block; font-weight: 500; color: var(--muted); font-size: 11px; }
 .compare-table tr.diff > th { box-shadow: inset 3px 0 0 var(--orange); }
 .names { margin: 0; padding-left: 18px; font-size: 14px; }
-.names li { padding: 1px 0; }
+.names li { padding: 2px 0; }
+.names .grade-stack { vertical-align: middle; }
 .names .link { font-weight: 600; text-decoration: none; }
 .names .muted, .muted { color: var(--muted); }
 .flags { margin: 0; padding-left: 18px; font-size: 13px; }
@@ -395,3 +408,11 @@ tbody tr:last-child > * { border-bottom: 0; }
 .panel-head .edit-toggle { background: none; color: var(--on-band); border-color: var(--band-border); font-weight: 600; }
 .panel-head .edit-toggle[aria-pressed='true'] { background: var(--orange); border-color: var(--orange); color: var(--on-accent); }
 .panel-section.editor { background: var(--hover); }
+
+/* Grade with its snap count underneath */
+.grade-stack { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; flex-shrink: 0; }
+.grade-stack .snaps { font-size: 10px; line-height: 1.1; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Autosave status */
+.save-state { font-size: 13px; color: var(--on-band-muted); align-self: center; white-space: nowrap; }
+.save-state.save-error { color: var(--orange); font-weight: 600; }

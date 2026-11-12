@@ -121,7 +121,7 @@ function PlayerChip({ player, grade: h = {}, onSelect, controls }) {
         <span className="name">{player.name}</span>
         {player.acquisition && <span className="acq">{player.acquisition}</span>}
         {player.availability && <span className={`avail avail-${player.availability}`} title={AVAILABILITY[player.availability]}>{player.availability}</span>}
-        <Grade value={h.grade} rank={h.rank} of={h.of} title={h.label} mode={h.mode} />
+        <Grade value={h.grade} rank={h.rank} of={h.of} title={h.label} mode={h.mode} snaps={h.snaps ?? null} />
       </button>
       {controls}
     </div>

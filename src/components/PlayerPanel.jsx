@@ -10,7 +10,7 @@ import {
 
 const BLANK = { id: '', name: '', jersey: '', position: 'WR', status: 'practice_squad', acquisition: '', tag: null, availability: null, marker: null, pffId: null, notes: '' };
 
-export default function PlayerPanel({ roster, pff, contracts, playerId, teamMode, override, onOverride, onCareerLoaded, onChange, onClose }) {
+export default function PlayerPanel({ roster, pff, contracts, playerId, teamMode, override, onOverride, onCareerLoaded, onChange, onClose, backLabel }) {
   const isNew = playerId === 'new';
   const existing = roster.players.find((p) => p.id === playerId);
   const [form, setForm] = useState(existing ?? BLANK);
@@ -110,7 +110,7 @@ export default function PlayerPanel({ roster, pff, contracts, playerId, teamMode
             <button onClick={cancelEdit}>Cancel</button>
             <button className="primary" onClick={apply}>{isNew ? 'Add player' : 'Apply'}</button>
           </div>
-          <p className="hint">Apply updates the roster here; press “Save changes” at the top to keep it.</p>
+          <p className="hint">Apply saves the change right away. Undo at the top reverses it.</p>
         </section>
   );
 
@@ -120,6 +120,9 @@ export default function PlayerPanel({ roster, pff, contracts, playerId, teamMode
   return (
     <div className="overlay" onClick={onClose}>
       <aside className="panel" role="dialog" aria-modal="true" aria-label={form.name || 'New player'} onClick={(e) => e.stopPropagation()}>
+        <nav className="panel-nav">
+          <button className="back" onClick={onClose}>‹ {backLabel ?? 'Back'}</button>
+        </nav>
         <header className={`panel-head tag-${form.tag ?? 'none'}`}>
           <div>
             <h2>{isNew ? 'Add player' : <>{form.jersey && <span className="jersey">#{form.jersey}</span>} {form.name}</>}</h2>

@@ -81,7 +81,7 @@ function Names({ list, onSelect, showSlot }) {
         <li key={`${n.key}-${i}`}>
           {n.ourId ? <button className="link" onClick={() => onSelect(n.ourId)}>{n.name}</button> : <span>{n.name}</span>}
           {showSlot && n.slot && <small className="muted"> {n.slot}</small>}
-          {' '}<Grade value={n.grade} title={n.gradeLabel} mode={n.mode} />
+          {' '}<Grade value={n.grade} title={n.gradeLabel} mode={n.mode} snaps={n.snaps ?? null} />
         </li>
       ))}
     </ol>
@@ -126,11 +126,11 @@ function analyse(roster, pff, grades) {
   function compareSlot(slot, alignments, ourIds, theirs) {
     const ours = ourIds.map((id) => {
       const g = gradeOf(id);
-      return { key: id, ourId: id, name: byId[id]?.name ?? id, grade: g.grade, gradeLabel: g.label, mode: g.mode };
+      return { key: id, ourId: id, name: byId[id]?.name ?? id, grade: g.grade, gradeLabel: g.label, mode: g.mode, snaps: g.snaps ?? null };
     });
     const theirsN = theirs.map((r) => {
       const g = r.ourId ? gradeOf(r.ourId) : { grade: r.grade, mode: 'season' };
-      return { key: r.pffId, ourId: r.ourId, pffId: r.pffId, name: r.name, slot: `${r.alignment}${r.depthOrder}`, grade: g.grade, gradeLabel: g.label, mode: g.mode };
+      return { key: r.pffId, ourId: r.ourId, pffId: r.pffId, name: r.name, slot: `${r.alignment}${r.depthOrder}`, grade: g.grade, gradeLabel: g.label, mode: g.mode, snaps: g.snaps ?? (r.ourId ? null : r.snaps) };
     });
     const flags = [];
     if (alignments.length && ours.length) {
