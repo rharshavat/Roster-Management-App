@@ -14,6 +14,7 @@ export default function PlayerPanel({ roster, pff, playerId, teamMode, override,
   const existing = roster.players.find((p) => p.id === playerId);
   const [form, setForm] = useState(existing ?? BLANK);
   const [error, setError] = useState('');
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -47,7 +48,7 @@ export default function PlayerPanel({ roster, pff, playerId, teamMode, override,
   }
 
   function remove() {
-    if (!confirm(`Remove ${existing.name} from the roster?`)) return;
+    if (!confirmRemove) { setConfirmRemove(true); return; }
     const next = removeFromDepth(roster, existing.id);
     onChange({ ...next, players: next.players.filter((p) => p.id !== existing.id) });
     onClose();
@@ -150,7 +151,7 @@ export default function PlayerPanel({ roster, pff, playerId, teamMode, override,
           </div>
           {error && <p className="msg error">{error}</p>}
           <div className="panel-actions">
-            {!isNew && <button className="danger" onClick={remove}>Remove player</button>}
+            {!isNew && <button className={`danger${confirmRemove ? ' confirm' : ''}`} onClick={remove} onBlur={() => setConfirmRemove(false)}>{confirmRemove ? `Tap again to remove ${existing.name}` : 'Remove player'}</button>}
             <span className="spacer" />
             <button onClick={onClose}>Cancel</button>
             <button className="primary" onClick={apply}>{isNew ? 'Add player' : 'Apply'}</button>

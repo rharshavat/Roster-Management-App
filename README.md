@@ -44,3 +44,7 @@ In the Claude Code cloud environment no `.env` is needed: the network proxy adds
 ## PFF CLI
 
 The same API is available from the terminal through [Restish](https://rest.sh), e.g. `restish pff team-roster nfl chicago-bears -o json`. See developer.pff.com for setup.
+
+## Mobile / claude.ai artifact
+
+`npm run build:artifact` bundles the app into one page, `dist/artifact.html`, with a snapshot of the roster, PFF data, team reports and career history built in. Published as a private claude.ai artifact, it works on a phone while you're signed in to Claude. Roster edits there save to the artifact's own database (document `app/roster`, writable only by the owner and editors), not to this repo; ask Claude to pull them back into `data/bears-roster.json`. The artifact can't call PFF, so refreshing its data means rebuilding and republishing. `dist/` is git-ignored because the snapshot contains licensed PFF data.

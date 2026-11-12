@@ -11,7 +11,8 @@
     "build": "vite build",
     "start": "node server/index.js",
     "sync:pff": "node scripts/sync-pff.js",
-    "sync:careers": "node scripts/sync-careers.js"
+    "sync:careers": "node scripts/sync-careers.js",
+    "build:artifact": "node scripts/build-artifact.js"
   },
   "dependencies": {
     "express": "^5.3.0",

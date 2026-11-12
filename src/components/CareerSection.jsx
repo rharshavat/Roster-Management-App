@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Grade from './Grade.jsx';
+import { canSync, compactCareer, playerCareer } from '../api.js';
 import { GRADE_MODES, careerGrade } from '../lib.js';
 
 // Stats shown per season, by what the player is graded on.
@@ -29,14 +30,9 @@ export default function CareerSection({ player, seasonGrade, teamMode, override,
   async function load(refresh = false) {
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
-      const r = await fetch(`/api/players/${encodeURIComponent(player.id)}/career${refresh ? '?refresh=1' : ''}`);
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error);
+      const data = await playerCareer(player.id, refresh);
       setState({ data });
-      onCareerLoaded?.(player.id, {
-        unit: data.unit, gradeLabel: data.gradeLabel, fetchedAt: data.fetchedAt,
-        seasons: data.seasons.map(({ league, phase, season, teams, snaps, grade }) => ({ league, phase, season, teams, snaps, grade })),
-      });
+      onCareerLoaded?.(player.id, compactCareer(data));
     } catch (e) {
       setState({ error: e.message });
     }
@@ -71,7 +67,7 @@ export default function CareerSection({ player, seasonGrade, teamMode, override,
       </p>
 
       {state.loading && <p className="hint">Loading career history…</p>}
-      {state.error && <p className="msg error">{state.error} <button className="link" onClick={() => load(true)}>Retry</button></p>}
+      {state.error && <p className="msg error">{state.error}{canSync && <> <button className="link" onClick={() => load(true)}>Retry</button></>}</p>}
       {career && (career.seasons.length === 0 ? <p className="hint">PFF has no graded seasons for this player.</p> : (
         <CareerTable career={career} position={player.position} onRefresh={() => load(true)} />
       ))}
@@ -146,7 +142,7 @@ function CareerTable({ career, position, onRefresh }) {
         </table>
       </div>
       <p className="hint">
-        Fetched {new Date(career.fetchedAt).toLocaleString()} · <button className="link" onClick={onRefresh}>Refresh from PFF</button>
+        Fetched {new Date(career.fetchedAt).toLocaleString()}{canSync && <> · <button className="link" onClick={onRefresh}>Refresh from PFF</button></>}
       </p>
     </>
   );

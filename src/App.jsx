@@ -4,6 +4,7 @@ import RosterTable from './components/RosterTable.jsx';
 import PlayerPanel from './components/PlayerPanel.jsx';
 import Compare from './components/Compare.jsx';
 import { GRADE_MODES, RESERVE_STATUSES, gradeFor, loadPref, savePref } from './lib.js';
+import * as api from './api.js';
 
 export default function App() {
   const [saved, setSaved] = useState(null); // last roster from server
@@ -28,15 +29,15 @@ export default function App() {
   }, []);
   const clearOverrides = () => { setOverridesState({}); savePref('gradeOverrides', {}); };
 
+  const [storage, setStorage] = useState(api.MODE === 'server' ? 'server' : 'loading');
+
   const load = useCallback(async () => {
-    const res = await fetch('/api/roster');
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    const data = await api.loadAll();
     setSaved(data.roster);
     setRoster(data.roster);
     setPff(data.pff);
-    const c = await fetch('/api/careers');
-    if (c.ok) setCareers(await c.json());
+    setCareers(data.careers);
+    setStorage(data.storage);
   }, []);
 
   useEffect(() => { load().catch((e) => setMessage({ type: 'error', text: e.message })); }, [load]);
@@ -58,11 +59,7 @@ export default function App() {
     setBusy('careers');
     setMessage({ type: 'info', text: 'Fetching career history from PFF… PFF limits reads per minute, so a full refresh can take a few minutes.' });
     try {
-      const res = await fetch('/api/careers/sync', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ force }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await api.syncCareers(force);
       setCareers(data.careers);
       setMessage({
         type: data.failed.length ? 'info' : 'ok',
@@ -84,11 +81,7 @@ export default function App() {
   async function save() {
     setBusy('save');
     try {
-      const res = await fetch('/api/roster', {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(roster),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error([data.error, ...(data.details ?? [])].join('\n'));
+      await api.saveRoster(roster);
       setSaved(roster);
       setMessage({ type: 'ok', text: 'Roster saved.' });
     } catch (e) {
@@ -100,11 +93,8 @@ export default function App() {
     setBusy('sync');
     setMessage({ type: 'info', text: 'Syncing PFF data… this can take a minute.' });
     try {
-      const res = await fetch('/api/pff/sync', { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      const r = await fetch('/api/roster');
-      setPff((await r.json()).pff);
+      const data = await api.syncPff();
+      setPff(await api.reloadPff());
       const extra = [...(data.unmatched?.length ? [`Unmatched: ${data.unmatched.join(', ')}`] : []), ...(data.warnings ?? [])];
       setMessage({ type: extra.length ? 'info' : 'ok', text: `PFF synced: ${data.matched} players matched. ${extra.join(' ')}` });
     } catch (e) {
@@ -130,13 +120,13 @@ export default function App() {
           <span className="logo" aria-hidden>C</span>
           <div>
             <h1>{roster.team.name}</h1>
-            <p className="sub">{roster.team.season} roster · source: {roster.source?.name} · PFF synced {syncedAt}</p>
+            <p className="sub">{roster.team.season} roster · source: {roster.source?.name} · PFF {api.MODE === 'artifact' ? 'snapshot' : 'synced'} {syncedAt}</p>
           </div>
         </div>
         <div className="actions">
-          <button onClick={syncPff} disabled={!!busy}>{busy === 'sync' ? 'Syncing…' : 'Sync PFF'}</button>
+          {api.canSync && <button onClick={syncPff} disabled={!!busy}>{busy === 'sync' ? 'Syncing…' : 'Sync PFF'}</button>}
           <button onClick={() => setRoster(saved)} disabled={!dirty || !!busy}>Discard</button>
-          <button className="primary" onClick={save} disabled={!dirty || !!busy}>{busy === 'save' ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}</button>
+          <button className="primary" onClick={save} disabled={!dirty || !!busy || storage === 'none' || storage === 'loading'}>{busy === 'save' ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}</button>
         </div>
       </header>
 
@@ -162,8 +152,12 @@ export default function App() {
         </span>
         <span className="spacer" />
         {missingCareers > 0 && <span className="hint">{missingCareers} players have no career data yet.</span>}
-        <button onClick={() => syncCareers(false)} disabled={!!busy}>{busy === 'careers' ? 'Fetching careers…' : 'Sync careers'}</button>
+        {api.canSync && <button onClick={() => syncCareers(false)} disabled={!!busy}>{busy === 'careers' ? 'Fetching careers…' : 'Sync careers'}</button>}
       </section>
+
+      {storage === 'none' && (
+        <p className="msg info" role="status">You can browse and edit, but saving isn't available in this view. Open the page on claude.ai while signed in to save changes.</p>
+      )}
 
       {message && (
         <p className={`msg ${message.type}`} role="status">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Grade from './Grade.jsx';
+import { playerReports } from '../api.js';
 
 // The stats worth seeing before "show all"; every grades* column is included too.
 const KEY_STATS = [
@@ -37,8 +38,7 @@ export default function PlayerReports({ playerId, syncedAt }) {
   useEffect(() => {
     let live = true;
     setState({ loading: true });
-    fetch(`/api/players/${encodeURIComponent(playerId)}/reports`)
-      .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d; })
+    playerReports(playerId)
       .then((d) => live && setState({ data: d }))
       .catch((e) => live && setState({ error: e.message }));
     return () => { live = false; };
