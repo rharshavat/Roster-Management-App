@@ -10,6 +10,7 @@ import path from 'node:path';
 import { ROOT, readRoster } from '../server/store.js';
 import { loadPffData, loadPlayerReports } from '../server/pff.js';
 import { readCareer } from '../server/career.js';
+import { loadContracts } from '../server/contracts.js';
 
 execSync('npx vite build', { cwd: ROOT, stdio: 'inherit' });
 
@@ -28,7 +29,8 @@ for (const p of roster.players) {
   const r = await loadPlayerReports(roster, p.id);
   if (r?.reports.length) reports[p.id] = r;
 }
-const snapshot = { builtAt: new Date().toISOString(), roster, pff, careers, reports };
+const contracts = await loadContracts();
+const snapshot = { builtAt: new Date().toISOString(), roster, pff, careers, reports, contracts };
 
 // Keep "</script" sequences from closing the inline tags early.
 const safe = (s) => s.replace(/<\/(script)/gi, '<\\/$1');

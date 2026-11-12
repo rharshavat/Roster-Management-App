@@ -15,6 +15,7 @@ export default function App() {
   const [busy, setBusy] = useState('');
   const [message, setMessage] = useState(null);
   const [careers, setCareers] = useState({});
+  const [contracts, setContracts] = useState(null);
   // How grades are shown: team-wide mode plus per-player overrides (this browser only).
   const [teamMode, setTeamModeState] = useState(() => loadPref('gradeMode', 'season'));
   const [overrides, setOverridesState] = useState(() => loadPref('gradeOverrides', {}));
@@ -37,6 +38,7 @@ export default function App() {
     setRoster(data.roster);
     setPff(data.pff);
     setCareers(data.careers);
+    setContracts(data.contracts ?? null);
     setStorage(data.storage);
   }, []);
 
@@ -175,7 +177,7 @@ export default function App() {
 
       <main>
         {tab === 'depth' && <DepthChart roster={roster} pff={pff} grades={grades} onChange={setRoster} onSelect={setSelected} />}
-        {tab === 'roster' && <RosterTable roster={roster} pff={pff} grades={grades} overrides={overrides} teamMode={teamMode} onOverride={setOverride} onSelect={setSelected} />}
+        {tab === 'roster' && <RosterTable roster={roster} pff={pff} grades={grades} contracts={contracts} overrides={overrides} teamMode={teamMode} onOverride={setOverride} onSelect={setSelected} />}
         {tab === 'compare' && <Compare roster={roster} pff={pff} grades={grades} teamMode={teamMode} onSelect={setSelected} />}
       </main>
 
@@ -184,6 +186,7 @@ export default function App() {
           key={selected}
           roster={roster}
           pff={pff}
+          contracts={contracts}
           playerId={selected}
           teamMode={teamMode}
           override={overrides[selected]}

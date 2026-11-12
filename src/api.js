@@ -38,7 +38,7 @@ export async function loadAll() {
   if (MODE === 'server') {
     const data = await json(await fetch('/api/roster'));
     const c = await fetch('/api/careers');
-    return { ...data, careers: c.ok ? await c.json() : {}, storage: 'server' };
+    return { ...data, careers: c.ok ? await c.json() : {}, storage: 'server' };  // data.contracts from /api/roster
   }
   const careers = Object.fromEntries(Object.entries(SNAPSHOT.careers).map(([id, c]) => [id, compactCareer(c)]));
   const db = await getDb();
@@ -53,7 +53,7 @@ export async function loadAll() {
       storage = 'none';
     }
   }
-  return { roster, pff: SNAPSHOT.pff, careers, storage };
+  return { roster, pff: SNAPSHOT.pff, careers, contracts: SNAPSHOT.contracts ?? null, storage };
 }
 
 export async function saveRoster(roster) {

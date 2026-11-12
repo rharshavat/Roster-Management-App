@@ -184,3 +184,15 @@ export function loadPref(key, fallback) {
 export function savePref(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
 }
+
+// Contract amounts arrive in millions of dollars.
+export function money(m) {
+  if (m == null || Number.isNaN(m)) return '';
+  if (m === 0) return '$0';
+  if (Math.abs(m) >= 1) return '$' + m.toFixed(m >= 100 ? 0 : 1) + 'M';
+  return '$' + Math.round(m * 1000) + 'K';
+}
+
+export function capHit(contract, season) {
+  return contract?.seasons.find((s) => s.year === String(season))?.cap_number ?? null;
+}

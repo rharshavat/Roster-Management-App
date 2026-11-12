@@ -13,10 +13,13 @@
     "sync:pff": "node scripts/sync-pff.js",
     "sync:careers": "node scripts/sync-careers.js",
     "build:artifact": "node scripts/build-artifact.js",
-    "sync:players": "node scripts/sync-players.js"
+    "sync:players": "node scripts/sync-players.js",
+    "sync:contracts": "node scripts/sync-contracts.js"
   },
   "dependencies": {
+    "apache-arrow": "^21.2.0",
     "express": "^5.3.0",
+    "parquet-wasm": "^0.9.0",
     "undici": "^8.12.4"
   },
   "devDependencies": {

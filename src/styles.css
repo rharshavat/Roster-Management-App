@@ -358,3 +358,17 @@ tbody tr:last-child > * { border-bottom: 0; }
 .moves .hint { margin-bottom: 0; }
 .move-select { font-size: 12px; padding: 2px 4px; }
 .status-free_agent { background: var(--ok-bg); color: var(--ok-fg); }
+
+/* Contract (player panel) */
+.contract-headline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+@media (max-width: 640px) { .contract-headline { grid-template-columns: repeat(2, 1fr); } }
+.contract-figure { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; }
+.contract-big { font-size: 18px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.contract-label { font-size: 12px; color: var(--muted); }
+.contract-sub { margin: 14px 0 6px; font-size: 14px; color: var(--ink); }
+.contract-table { font-size: 13px; }
+.contract-table th, .contract-table td { padding: 5px 8px; white-space: nowrap; }
+.contract-table .strong { font-weight: 700; }
+.contract-table tr.current td { background: var(--hover); font-weight: 600; }
+.contract-table tr.future td { color: var(--muted); }
+.contract a { color: var(--tag-none); }

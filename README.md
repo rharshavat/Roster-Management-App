@@ -45,6 +45,10 @@ In the Claude Code cloud environment no `.env` is needed: the network proxy adds
 
 The same API is available from the terminal through [Restish](https://rest.sh), e.g. `restish pff team-roster nfl chicago-bears -o json`. See developer.pff.com for setup.
 
+## Contracts
+
+`npm run sync:contracts` downloads nflverse's copy of OverTheCap contract data (`historical_contracts.parquet` from the nflverse-data `contracts` release) and matches it to the roster by name, then draft year, college and position. Each player page shows the current deal, cap by season and contract history; the roster table has a sortable cap-hit column. The data is cached in `data/pff-cache/contracts.json` (git-ignored). It can lag OverTheCap by days, and the CSV version of the same release stopped updating in 2022, so the app reads the Parquet file.
+
 ## Mobile / claude.ai artifact
 
 `npm run build:artifact` bundles the app into one page, `dist/artifact.html`, with a snapshot of the roster, PFF data, team reports and career history built in. Published as a private claude.ai artifact, it works on a phone while you're signed in to Claude. Roster edits there save to the artifact's own database (document `app/roster`, writable only by the owner and editors), not to this repo; ask Claude to pull them back into `data/bears-roster.json`. The artifact can't call PFF, so refreshing its data means rebuilding and republishing. `dist/` is git-ignored because the snapshot contains licensed PFF data.

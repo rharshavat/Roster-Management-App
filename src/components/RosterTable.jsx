@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import Grade from './Grade.jsx';
-import { GRADE_MODES, POSITIONS, RESERVE_STATUSES, STATUS_LABELS, TAGS, age, depthSlots, describeAcquisition, formatHeight } from '../lib.js';
+import { GRADE_MODES, POSITIONS, capHit, money, RESERVE_STATUSES, STATUS_LABELS, TAGS, age, depthSlots, describeAcquisition, formatHeight } from '../lib.js';
 
 const MODE_CYCLE = [null, 'season', 'nfl', 'all', 'pre']; // null = follow the team setting
 
@@ -24,9 +24,10 @@ const COLUMNS = [
   { key: 'college', label: 'College', value: (r) => r.bio?.college ?? '' },
   { key: 'grade', label: 'PFF grade', value: (r) => r.h.grade ?? -1 },
   { key: 'snaps', label: 'Snaps', value: (r) => r.h.snaps ?? -1 },
+  { key: 'cap', label: 'Cap hit', value: (r) => r.cap ?? -1 },
 ];
 
-export default function RosterTable({ roster, pff, grades, overrides, teamMode, onOverride, onSelect }) {
+export default function RosterTable({ roster, pff, grades, contracts, overrides, teamMode, onOverride, onSelect }) {
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [pos, setPos] = useState('');
@@ -40,13 +41,13 @@ export default function RosterTable({ roster, pff, grades, overrides, teamMode, 
       .filter((p) => test(p) && (!pos || p.position === pos) && (!q || p.name.toLowerCase().includes(q) || p.jersey === q))
       .map((p) => {
         const d = pff?.players?.[p.id];
-        return { p, bio: d?.bio, h: grades[p.id] ?? {}, age: age(d?.bio?.dob), slots: depthSlots(roster, p.id) };
+        return { p, bio: d?.bio, h: grades[p.id] ?? {}, age: age(d?.bio?.dob), slots: depthSlots(roster, p.id), cap: capHit(contracts?.players?.[p.id], pff?.meta?.season) };
       })
       .sort((a, b) => {
         const va = col.value(a), vb = col.value(b);
         return (va < vb ? -1 : va > vb ? 1 : 0) * sort.dir || a.p.name.localeCompare(b.p.name);
       });
-  }, [roster, pff, grades, filter, query, pos, sort]);
+  }, [roster, pff, grades, contracts, filter, query, pos, sort]);
 
   const positions = [...new Set(roster.players.map((p) => p.position))].sort((a, b) => POSITIONS.indexOf(a) - POSITIONS.indexOf(b));
 
@@ -82,7 +83,7 @@ export default function RosterTable({ roster, pff, grades, overrides, teamMode, 
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ p, bio, h, age: a, slots }) => (
+            {rows.map(({ p, bio, h, age: a, slots, cap }) => (
               <tr key={p.id} onClick={() => onSelect(p.id)} className="clickable">
                 <td className="num">{p.jersey}</td>
                 <td>
@@ -110,6 +111,7 @@ export default function RosterTable({ roster, pff, grades, overrides, teamMode, 
                   >{overrides[p.id] ? GRADE_MODES[overrides[p.id]].short : 'Team'}</button>
                 </td>
                 <td className="num">{h.snaps ?? ''}</td>
+                <td className="num">{money(cap)}</td>
               </tr>
             ))}
           </tbody>

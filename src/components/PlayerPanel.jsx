@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Grade from './Grade.jsx';
 import PlayerReports from './PlayerReports.jsx';
 import CareerSection from './CareerSection.jsx';
+import ContractSection from './ContractSection.jsx';
 import {
   AVAILABILITY, POSITIONS, STATUSES, STATUS_LABELS, TAGS, age, depthSlots, describeAcquisition,
   formatHeight, headline, removeFromDepth, rosterMoves, setStatus, slugify,
@@ -9,7 +10,7 @@ import {
 
 const BLANK = { id: '', name: '', jersey: '', position: 'WR', status: 'practice_squad', acquisition: '', tag: null, availability: null, marker: null, pffId: null, notes: '' };
 
-export default function PlayerPanel({ roster, pff, playerId, teamMode, override, onOverride, onCareerLoaded, onChange, onClose }) {
+export default function PlayerPanel({ roster, pff, contracts, playerId, teamMode, override, onOverride, onCareerLoaded, onChange, onClose }) {
   const isNew = playerId === 'new';
   const existing = roster.players.find((p) => p.id === playerId);
   const [form, setForm] = useState(existing ?? BLANK);
@@ -115,6 +116,13 @@ export default function PlayerPanel({ roster, pff, playerId, teamMode, override,
               onOverride={onOverride}
               onCareerLoaded={onCareerLoaded}
             />
+          </section>
+        )}
+
+        {!isNew && (
+          <section className="panel-section">
+            <h3>Contract</h3>
+            <ContractSection contract={contracts?.players?.[playerId]} season={pff?.meta?.season} fetchedAt={contracts?.fetchedAt} />
           </section>
         )}
 

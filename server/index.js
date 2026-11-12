@@ -4,6 +4,7 @@ import path from 'node:path';
 import { ROOT, readRoster, validateRoster, writeRoster } from './store.js';
 import { loadPffData, loadPlayerReports, syncPff } from './pff.js';
 import { loadCareers, readCareer, syncCareers } from './career.js';
+import { loadContracts } from './contracts.js';
 
 try { process.loadEnvFile(path.join(ROOT, '.env')); } catch {}
 
@@ -13,7 +14,7 @@ app.use(express.json({ limit: '2mb' }));
 app.get('/api/roster', async (_req, res, next) => {
   try {
     const roster = await readRoster();
-    res.json({ roster, pff: await loadPffData(roster) });
+    res.json({ roster, pff: await loadPffData(roster), contracts: await loadContracts() });
   } catch (e) { next(e); }
 });
 
