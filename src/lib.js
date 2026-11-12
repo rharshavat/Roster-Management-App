@@ -6,6 +6,7 @@ export const STATUS_LABELS = {
   nfi: 'Non-football injury',
   suspended: 'Suspended',
   exempt: 'Exempt',
+  free_agent: 'Free-agent target',
 };
 export const STATUSES = Object.keys(STATUS_LABELS);
 export const RESERVE_STATUSES = ['injured_reserve', 'pup', 'nfi', 'suspended', 'exempt'];
@@ -101,6 +102,24 @@ export function depthSlots(roster, id) {
   return out;
 }
 
+// Change a player's roster status. Anyone leaving the active roster comes
+// off the depth chart; putting someone on the depth chart makes them active.
+export function setStatus(roster, id, status) {
+  const next = { ...roster, players: roster.players.map((p) => (p.id === id ? { ...p, status } : p)) };
+  return status === 'active' ? next : removeFromDepth(next, id);
+}
+
+// Quick roster moves offered for each status: [target status, button label].
+export function rosterMoves(status) {
+  const all = {
+    active: [['practice_squad', 'Move to practice squad'], ['injured_reserve', 'Place on IR'], ['free_agent', 'Release to free-agent list']],
+    practice_squad: [['active', 'Promote to active roster'], ['injured_reserve', 'Place on IR'], ['free_agent', 'Release to free-agent list']],
+    injured_reserve: [['active', 'Activate to roster'], ['practice_squad', 'Move to practice squad'], ['free_agent', 'Release to free-agent list']],
+    free_agent: [['active', 'Sign to active roster'], ['practice_squad', 'Sign to practice squad']],
+  };
+  return all[status] ?? [['active', 'Move to active roster'], ['practice_squad', 'Move to practice squad']];
+}
+
 export function removeFromDepth(roster, id) {
   const depthChart = {};
   for (const [k, slots] of Object.entries(roster.depthChart)) {
@@ -141,9 +160,20 @@ export function careerGrade(career, mode) {
   };
 }
 
-// The grade to display for one player under a mode.
-export function gradeFor(mode, player, pffPlayer, career) {
-  if (mode === 'season') return { ...headline(pffPlayer, player), mode };
+// The grade to display for one player under a mode. Players who aren't on
+// the Bears (free-agent targets) have no Bears report rows, so their season
+// grade comes from their career row for the current NFL season.
+export function gradeFor(mode, player, pffPlayer, career, season) {
+  if (mode === 'season') {
+    const h = headline(pffPlayer, player);
+    if (h.grade == null && career && season) {
+      const row = career.seasons.find((s) => s.league === 'nfl' && s.phase !== 'pre' && s.season === season);
+      if (row?.grade != null) {
+        return { grade: row.grade, snaps: row.snaps, mode, label: `${season} ${career.gradeLabel.toLowerCase()} (${row.teams.join('/') || 'NFL'})` };
+      }
+    }
+    return { ...h, mode };
+  }
   return { ...careerGrade(career, mode), mode };
 }
 

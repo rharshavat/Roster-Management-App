@@ -6,7 +6,7 @@ export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 export const ROSTER_FILE = path.join(ROOT, 'data', 'bears-roster.json');
 export const CACHE_DIR = path.join(ROOT, 'data', 'pff-cache');
 
-export const STATUSES = ['active', 'practice_squad', 'injured_reserve', 'pup', 'nfi', 'suspended', 'exempt'];
+export const STATUSES = ['active', 'practice_squad', 'injured_reserve', 'pup', 'nfi', 'suspended', 'exempt', 'free_agent'];
 
 export async function readRoster() {
   return JSON.parse(await readFile(ROSTER_FILE, 'utf8'));

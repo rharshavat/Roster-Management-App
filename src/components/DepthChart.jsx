@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Grade from './Grade.jsx';
-import { AVAILABILITY, POSITIONS, RESERVE_STATUSES, TAGS, UNITS, describeAcquisition } from '../lib.js';
+import { AVAILABILITY, POSITIONS, RESERVE_STATUSES, TAGS, UNITS, depthSlots, describeAcquisition, rosterMoves, setStatus } from '../lib.js';
 
 export default function DepthChart({ roster, grades, onChange, onSelect }) {
   const [editing, setEditing] = useState(false);
@@ -10,6 +10,14 @@ export default function DepthChart({ roster, grades, onChange, onSelect }) {
     const slots = roster.depthChart[unit].map((s, i) => (i === idx ? { ...s, players } : s));
     onChange({ ...roster, depthChart: { ...roster.depthChart, [unit]: slots } });
   }
+  // Putting a practice-squad player or free agent on the depth chart
+  // moves them to the active roster.
+  function addToSlot(unit, idx, pid) {
+    const slots = roster.depthChart[unit].map((s, i) => (i === idx ? { ...s, players: [...s.players, pid] } : s));
+    const next = { ...roster, depthChart: { ...roster.depthChart, [unit]: slots } };
+    onChange(byId[pid].status === 'active' ? next : setStatus(next, pid, 'active'));
+  }
+  const movePlayer = (pid, status) => onChange(setStatus(roster, pid, status));
   function move(unit, idx, from, to) {
     const players = [...roster.depthChart[unit][idx].players];
     if (to < 0 || to >= players.length) return;
@@ -19,6 +27,10 @@ export default function DepthChart({ roster, grades, onChange, onSelect }) {
 
   const ps = roster.players.filter((p) => p.status === 'practice_squad');
   const reserves = roster.players.filter((p) => RESERVE_STATUSES.includes(p.status));
+  const freeAgents = roster.players.filter((p) => p.status === 'free_agent');
+  const offChart = roster.players.filter((p) => p.status === 'active'
+    && !depthSlots(roster, p.id).some((s) => !/^(PT|PK|LS|H|KO|PR|KR)\d/.test(s) || ['P', 'K', 'LS'].includes(p.position)));
+  const listProps = { grades, onSelect, onMove: editing ? movePlayer : null };
 
   return (
     <div className="depth">
@@ -60,7 +72,7 @@ export default function DepthChart({ roster, grades, onChange, onSelect }) {
                     })}
                     {editing && (
                       <td>
-                        <AddToSlot roster={roster} exclude={slot.players} onAdd={(pid) => updateSlot(key, idx, [...slot.players, pid])} />
+                        <AddToSlot roster={roster} exclude={slot.players} onAdd={(pid) => addToSlot(key, idx, pid)} />
                       </td>
                     )}
                   </tr>
@@ -72,15 +84,28 @@ export default function DepthChart({ roster, grades, onChange, onSelect }) {
         </section>
       ))}
 
+      {offChart.length > 0 && (
+        <section className="unit">
+          <h2>Active, not on the depth chart <small>{offChart.length}</small></h2>
+          <GroupedList players={offChart} {...listProps} />
+        </section>
+      )}
+
       <section className="unit">
         <h2>Practice squad <small>{ps.length}/17</small></h2>
-        <GroupedList players={ps} grades={grades} onSelect={onSelect} />
+        <GroupedList players={ps} {...listProps} />
       </section>
 
       <section className="unit">
         <h2>Reserves <small>{reserves.length}</small></h2>
-        <GroupedList players={reserves} grades={grades} onSelect={onSelect} groupBy="status" />
+        <GroupedList players={reserves} {...listProps} groupBy="status" />
       </section>
+
+      <section className="unit">
+        <h2>Free-agent targets <small>{freeAgents.length}</small></h2>
+        <GroupedList players={freeAgents} {...listProps} />
+      </section>
+      {!editing && <p className="hint">Tap “Edit depth chart” to move players between the roster, practice squad, IR and free-agent targets, or open any player.</p>}
     </div>
   );
 }
@@ -103,21 +128,23 @@ function PlayerChip({ player, grade: h = {}, onSelect, controls }) {
   );
 }
 
+const ORDER = ['active', 'practice_squad', 'free_agent'];
+
 function AddToSlot({ roster, exclude, onAdd }) {
   const options = roster.players
     .filter((p) => !exclude.includes(p.id) && !RESERVE_STATUSES.includes(p.status))
-    .sort((a, b) => (a.status === b.status ? a.name.localeCompare(b.name) : a.status === 'active' ? -1 : 1));
+    .sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || a.name.localeCompare(b.name));
   return (
     <select aria-label="Add player to slot" value="" onChange={(e) => e.target.value && onAdd(e.target.value)}>
       <option value="">+ Add…</option>
       {options.map((p) => (
-        <option key={p.id} value={p.id}>{p.position} {p.name}{p.status === 'practice_squad' ? ' (PS)' : ''}</option>
+        <option key={p.id} value={p.id}>{p.position} {p.name}{p.status === 'practice_squad' ? ' (PS)' : p.status === 'free_agent' ? ' (FA)' : ''}</option>
       ))}
     </select>
   );
 }
 
-function GroupedList({ players, grades, onSelect, groupBy = 'position' }) {
+function GroupedList({ players, grades, onSelect, onMove, groupBy = 'position' }) {
   if (!players.length) return <p className="hint">None.</p>;
   const groups = {};
   for (const p of players) (groups[groupBy === 'status' ? p.status.replace('_', ' ') : p.position] ??= []).push(p);
@@ -136,6 +163,12 @@ function GroupedList({ players, grades, onSelect, groupBy = 'position' }) {
                   <span key={p.id} className="chip-row-item">
                     <PlayerChip player={p} grade={grades[p.id]} onSelect={onSelect} />
                     {groupBy === 'status' && <span className="pos-badge">{p.position}</span>}
+                    {onMove && (
+                      <select className="move-select" aria-label={`Move ${p.name}`} value="" onChange={(e) => e.target.value && onMove(p.id, e.target.value)}>
+                        <option value="">Move…</option>
+                        {rosterMoves(p.status).map(([to, label]) => <option key={to} value={to}>{label}</option>)}
+                      </select>
+                    )}
                   </span>
                 ))}
               </td>

@@ -163,6 +163,31 @@ export async function syncPff({ log = console.log } = {}) {
   return meta;
 }
 
+// Add directory records for players new to the roster (e.g. free agents)
+// without re-running the full, slow team sync. Needs each player's pffId
+// or an unambiguous name match.
+export async function resolveNewPlayers(roster, { log = console.log } = {}) {
+  const directory = (await readCache('players')) ?? {};
+  const added = [];
+  const unmatched = [];
+  for (const p of roster.players) {
+    if (directory[p.id] && (!p.pffId || directory[p.id].id === p.pffId)) continue;
+    let rec = null;
+    if (p.pffId) {
+      rec = (await pffGet('/v1/players', { league: 'nfl', id: p.pffId })).players?.[0] ?? null;
+    } else {
+      const found = ((await pffGet('/v1/players', { league: 'nfl', name: p.name })).players ?? [])
+        .filter((f) => normalizeName(`${f.first_name} ${f.last_name}`) === normalizeName(p.name));
+      if (found.length === 1) rec = found[0];
+    }
+    if (rec) { directory[p.id] = rec; added.push(p.name); } else unmatched.push(p.name);
+  }
+  await mkdir(CACHE_DIR, { recursive: true });
+  await writeFile(path.join(CACHE_DIR, 'players.json'), JSON.stringify(directory, null, 2));
+  log(`Added ${added.length} player(s) to the PFF directory cache.${unmatched.length ? ` Unmatched: ${unmatched.join(', ')}` : ''}`);
+  return { added, unmatched };
+}
+
 export async function readCache(name) {
   try { return JSON.parse(await readFile(path.join(CACHE_DIR, `${name}.json`), 'utf8')); }
   catch { return null; }

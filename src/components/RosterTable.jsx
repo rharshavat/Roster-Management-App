@@ -9,6 +9,7 @@ const FILTERS = [
   { key: 'active', label: 'Active', test: (p) => p.status === 'active' },
   { key: 'ps', label: 'Practice squad', test: (p) => p.status === 'practice_squad' },
   { key: 'reserve', label: 'Reserves', test: (p) => RESERVE_STATUSES.includes(p.status) },
+  { key: 'fa', label: 'Free agents', test: (p) => p.status === 'free_agent' },
 ];
 
 const COLUMNS = [

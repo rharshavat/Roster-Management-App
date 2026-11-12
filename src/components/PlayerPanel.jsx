@@ -4,7 +4,7 @@ import PlayerReports from './PlayerReports.jsx';
 import CareerSection from './CareerSection.jsx';
 import {
   AVAILABILITY, POSITIONS, STATUSES, STATUS_LABELS, TAGS, age, depthSlots, describeAcquisition,
-  formatHeight, headline, removeFromDepth, slugify,
+  formatHeight, headline, removeFromDepth, rosterMoves, setStatus, slugify,
 } from '../lib.js';
 
 const BLANK = { id: '', name: '', jersey: '', position: 'WR', status: 'practice_squad', acquisition: '', tag: null, availability: null, marker: null, pffId: null, notes: '' };
@@ -47,6 +47,11 @@ export default function PlayerPanel({ roster, pff, playerId, teamMode, override,
     onClose();
   }
 
+  function moveTo(status) {
+    onChange(setStatus(roster, playerId, status));
+    setForm((f) => ({ ...f, status }));
+  }
+
   function remove() {
     if (!confirmRemove) { setConfirmRemove(true); return; }
     const next = removeFromDepth(roster, existing.id);
@@ -67,6 +72,18 @@ export default function PlayerPanel({ roster, pff, playerId, teamMode, override,
           </div>
           <button className="close" onClick={onClose} aria-label="Close">✕</button>
         </header>
+
+        {!isNew && (
+          <section className="panel-section moves">
+            <h3>Roster move</h3>
+            <div className="move-buttons">
+              {rosterMoves(existing.status).map(([to, label]) => (
+                <button key={to} className={to === 'active' ? 'primary' : ''} onClick={() => moveTo(to)}>{label}</button>
+              ))}
+            </div>
+            {existing.notes && <p className="hint">{existing.notes}</p>}
+          </section>
+        )}
 
         {!isNew && (
           <section className="panel-section">
@@ -92,6 +109,7 @@ export default function PlayerPanel({ roster, pff, playerId, teamMode, override,
             <CareerSection
               player={existing}
               seasonGrade={{ ...h, mode: 'season' }}
+              pffSeason={pff?.meta?.season}
               teamMode={teamMode}
               override={override}
               onOverride={onOverride}

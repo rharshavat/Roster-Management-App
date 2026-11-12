@@ -354,3 +354,7 @@ tbody tr:last-child > * { border-bottom: 0; }
 .check.small { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; margin: 4px 0 8px; }
 .mode-cards { grid-template-columns: repeat(4, 1fr); }
 @media (max-width: 640px) { .mode-cards { grid-template-columns: 1fr 1fr; } }
+.move-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.moves .hint { margin-bottom: 0; }
+.move-select { font-size: 12px; padding: 2px 4px; }
+.status-free_agent { background: var(--ok-bg); color: var(--ok-fg); }

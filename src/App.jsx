@@ -45,7 +45,7 @@ export default function App() {
   const grades = useMemo(() => {
     const out = {};
     for (const p of roster?.players ?? []) {
-      out[p.id] = gradeFor(overrides[p.id] ?? teamMode, p, pff?.players?.[p.id], careers[p.id]);
+      out[p.id] = gradeFor(overrides[p.id] ?? teamMode, p, pff?.players?.[p.id], careers[p.id], pff?.meta?.season);
     }
     return out;
   }, [roster, pff, careers, teamMode, overrides]);
@@ -110,6 +110,7 @@ export default function App() {
     active: roster.players.filter((p) => p.status === 'active').length,
     ps: roster.players.filter((p) => p.status === 'practice_squad').length,
     reserve: roster.players.filter((p) => RESERVE_STATUSES.includes(p.status)).length,
+    fa: roster.players.filter((p) => p.status === 'free_agent').length,
   };
   const syncedAt = pff?.meta?.syncedAt ? new Date(pff.meta.syncedAt).toLocaleString() : 'never';
 
@@ -134,6 +135,7 @@ export default function App() {
         <Stat label="Active roster" value={`${counts.active}/53`} warn={counts.active > 53} />
         <Stat label="Practice squad" value={`${counts.ps}/17`} warn={counts.ps > 17} />
         <Stat label="Reserve lists" value={counts.reserve} />
+        <Stat label="Free-agent targets" value={counts.fa} />
         <div className="coaches">
           {roster.coaches?.map((c) => <span key={c.role}><b>{c.role}</b> {c.name}</span>)}
         </div>

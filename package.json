@@ -12,7 +12,8 @@
     "start": "node server/index.js",
     "sync:pff": "node scripts/sync-pff.js",
     "sync:careers": "node scripts/sync-careers.js",
-    "build:artifact": "node scripts/build-artifact.js"
+    "build:artifact": "node scripts/build-artifact.js",
+    "sync:players": "node scripts/sync-players.js"
   },
   "dependencies": {
     "express": "^5.3.0",
