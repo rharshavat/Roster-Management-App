@@ -60,7 +60,21 @@ async function mapLimit(items, limit, fn) {
   return out;
 }
 
+// The three summary reports feed each player's headline grade.
 const REPORTS = ['offense', 'defense', 'special-teams'];
+
+// Every team report PFF serves, in display order.
+export const ALL_REPORTS = {
+  offense: 'Offense summary', passing: 'Passing', 'passing-depth': 'Passing by depth',
+  'passing-pressure': 'Passing under pressure', rushing: 'Rushing', receiving: 'Receiving',
+  'receiving-depth': 'Receiving by depth', blocking: 'Blocking', 'pass-blocking': 'Pass blocking',
+  'run-blocking': 'Run blocking', defense: 'Defense summary', 'run-defense': 'Run defense',
+  'pass-rush': 'Pass rush', coverage: 'Coverage', 'special-teams': 'Special teams summary',
+  'kick-returns': 'Kick & punt returns', 'field-goals': 'Field goals', punting: 'Punting', kickoffs: 'Kickoffs',
+};
+
+// Columns that identify the row rather than describe performance.
+const IDENTITY_COLUMNS = new Set(['playerId', 'player', 'position', 'team', 'teamName', 'franchiseId', 'jerseyNumber', 'draftSeason', 'eligibleSeason']);
 
 export async function syncPff({ log = console.log } = {}) {
   const roster = await readRoster();
@@ -72,15 +86,23 @@ export async function syncPff({ log = console.log } = {}) {
   const depth = await pffGet(`/v2/nfl/teams/${slug}/roster`, { season });
   await save('depth-chart', depth);
 
+  // PFF's reports are slow and sometimes time out upstream. A failed report
+  // keeps its last cached copy and is reported as a warning.
+  const warnings = [];
   const reports = {};
-  for (const r of REPORTS) {
-    log(`Fetching ${r} report…`);
-    reports[r] = await pffGet(`/v2/nfl/teams/${slug}/reports/${r}`, { season });
-    await save(`report-${r}`, reports[r]);
-  }
+  await mapLimit(Object.keys(ALL_REPORTS), 3, async (r) => {
+    try {
+      reports[r] = await pffGet(`/v2/nfl/teams/${slug}/reports/${r}`, { season }, 3);
+      await save(`report-${r}`, reports[r]);
+      log(`Fetched ${r} report (${reports[r].rows.length} players).`);
+    } catch (e) {
+      reports[r] = await readCache(`report-${r}`);
+      warnings.push(`${ALL_REPORTS[r]} report not updated${reports[r] ? ' (kept previous copy)' : ''}: ${e.message}`);
+      log(`Warning: ${warnings.at(-1)}`);
+    }
+  });
 
   log('Fetching schedule…');
-  const warnings = [];
   try {
     await save('schedule', await pffGet(`/v2/nfl/teams/${slug}/schedule`, { season }, 2));
   } catch (e) {
@@ -91,7 +113,7 @@ export async function syncPff({ log = console.log } = {}) {
   // Resolve every managed player to a PFF player record.
   const known = new Map();
   for (const row of depth.rows) known.set(normalizeName(row.name), row.playerId);
-  for (const r of REPORTS) for (const row of reports[r].rows) known.set(normalizeName(row.player), row.playerId);
+  for (const rep of Object.values(reports)) for (const row of rep?.rows ?? []) known.set(normalizeName(row.player), row.playerId);
 
   log(`Looking up ${roster.players.length} players in the PFF directory…`);
   const directory = {};
@@ -177,5 +199,31 @@ export async function loadPffData(roster) {
       specialTeams: s && pick(s, ['gradesMiscSt', 'gradesKickReturn', 'gradesPuntReturn', 'gradesPunter', 'gradesFgepKicker', 'gradesKickoffKicker', 'gradesLongSnap', 'totalSnaps', 'tackles']),
     };
   }
-  return { meta, players, schedule: schedule?.rows ?? null };
+  // PFF's own depth chart, each row tagged with our player id when matched.
+  const ourIdByPff = new Map(Object.entries(players).map(([id, d]) => [d.pffId, id]));
+  const depthChart = (depth?.rows ?? []).map((r) => ({
+    pffId: r.playerId, ourId: ourIdByPff.get(r.playerId) ?? null, name: r.name, jersey: r.jersey,
+    position: r.position, alignment: r.alignment, depthOrder: r.depthOrder, unit: r.unit,
+    grade: r.grade, snaps: r.snapCounts, status: r.status,
+  }));
+  return { meta, players, depthChart, schedule: schedule?.rows ?? null };
+}
+
+// Every cached team report row for one player, with its stat columns.
+export async function loadPlayerReports(roster, playerId) {
+  const player = roster.players.find((p) => p.id === playerId);
+  if (!player) return null;
+  const directory = (await readCache('players')) ?? {};
+  const pffId = player.pffId ?? directory[playerId]?.id;
+  if (!pffId) return { pffId: null, reports: [] };
+  const reports = [];
+  for (const [key, label] of Object.entries(ALL_REPORTS)) {
+    const rep = await readCache(`report-${key}`);
+    const row = rep?.rows.find((r) => r.playerId === pffId);
+    if (!row) continue;
+    const columns = rep.columns.filter((c) => !IDENTITY_COLUMNS.has(c.key) && row[c.key] != null);
+    if (!columns.length) continue;
+    reports.push({ key, label, weekGroup: rep.weekGroup, columns, values: Object.fromEntries(columns.map((c) => [c.key, row[c.key]])) });
+  }
+  return { pffId, reports };
 }

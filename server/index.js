@@ -2,7 +2,7 @@ import express from 'express';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { ROOT, readRoster, validateRoster, writeRoster } from './store.js';
-import { loadPffData, syncPff } from './pff.js';
+import { loadPffData, loadPlayerReports, syncPff } from './pff.js';
 
 try { process.loadEnvFile(path.join(ROOT, '.env')); } catch {}
 
@@ -22,6 +22,14 @@ app.put('/api/roster', async (req, res, next) => {
     if (errors.length) return res.status(400).json({ error: 'Invalid roster', details: errors });
     await writeRoster(req.body);
     res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+app.get('/api/players/:id/reports', async (req, res, next) => {
+  try {
+    const result = await loadPlayerReports(await readRoster(), req.params.id);
+    if (!result) return res.status(404).json({ error: `No player "${req.params.id}"` });
+    res.json(result);
   } catch (e) { next(e); }
 });
 

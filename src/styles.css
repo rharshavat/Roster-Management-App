@@ -213,3 +213,39 @@ tbody tr:last-child > * { border-bottom: 0; }
   .form { grid-template-columns: 1fr; }
   .depth-table td { min-width: 180px; }
 }
+
+/* PFF season reports (player panel) */
+.report { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; }
+.report summary {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 8px 12px; cursor: pointer; font-weight: 600; color: var(--navy);
+}
+.report[open] summary { border-bottom: 1px solid var(--border); }
+.report-grades { display: inline-flex; gap: 4px; }
+.stat-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 2px 14px; margin: 0; padding: 8px 12px; font-size: 13px;
+}
+.stat-grid div { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed var(--border); padding: 3px 0; }
+.stat-grid dt { color: var(--muted); }
+.stat-grid dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.report .link.small { font-size: 13px; margin: 0 12px 10px; color: var(--tag-none); }
+
+/* PFF comparison */
+.compare .toolbar { align-items: flex-start; }
+.compare .check { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; white-space: nowrap; }
+.compare-table td { vertical-align: top; }
+.compare-table tbody th small { display: block; font-weight: 500; color: var(--muted); font-size: 11px; }
+.compare-table tr.diff > th { box-shadow: inset 3px 0 0 var(--orange); }
+.names { margin: 0; padding-left: 18px; font-size: 14px; }
+.names li { padding: 1px 0; }
+.names .link { font-weight: 600; text-decoration: none; }
+.names .muted, .muted { color: var(--muted); }
+.flags { margin: 0; padding-left: 18px; font-size: 13px; }
+.flags li { padding: 1px 0; }
+.flag-starter { color: #8a1c14; font-weight: 600; }
+.flag-grade { color: var(--g-high); }
+.flag-missing, .flag-extra, .flag-status { color: #6b4200; }
+.flag-order { color: var(--muted); }
+.match { color: var(--g-high); font-size: 13px; }
+.compare-table td:last-child { min-width: 280px; }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import DepthChart from './components/DepthChart.jsx';
 import RosterTable from './components/RosterTable.jsx';
 import PlayerPanel from './components/PlayerPanel.jsx';
+import Compare from './components/Compare.jsx';
 import { RESERVE_STATUSES } from './lib.js';
 
 export default function App() {
@@ -109,12 +110,13 @@ export default function App() {
       <nav className="tabs" role="tablist">
         <button role="tab" aria-selected={tab === 'depth'} onClick={() => setTab('depth')}>Depth chart</button>
         <button role="tab" aria-selected={tab === 'roster'} onClick={() => setTab('roster')}>Full roster</button>
+        <button role="tab" aria-selected={tab === 'compare'} onClick={() => setTab('compare')}>PFF comparison</button>
       </nav>
 
       <main>
-        {tab === 'depth'
-          ? <DepthChart roster={roster} pff={pff} onChange={setRoster} onSelect={setSelected} />
-          : <RosterTable roster={roster} pff={pff} onSelect={setSelected} />}
+        {tab === 'depth' && <DepthChart roster={roster} pff={pff} onChange={setRoster} onSelect={setSelected} />}
+        {tab === 'roster' && <RosterTable roster={roster} pff={pff} onSelect={setSelected} />}
+        {tab === 'compare' && <Compare roster={roster} pff={pff} onSelect={setSelected} />}
       </main>
 
       {selected && (

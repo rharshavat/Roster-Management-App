@@ -1,23 +1,12 @@
 import { useEffect, useState } from 'react';
 import Grade from './Grade.jsx';
+import PlayerReports from './PlayerReports.jsx';
 import {
   AVAILABILITY, POSITIONS, STATUSES, STATUS_LABELS, TAGS, age, depthSlots, describeAcquisition,
   formatHeight, headline, removeFromDepth, slugify,
 } from '../lib.js';
 
 const BLANK = { id: '', name: '', jersey: '', position: 'WR', status: 'practice_squad', acquisition: '', tag: null, availability: null, marker: null, pffId: null, notes: '' };
-
-const STAT_LABELS = {
-  gradesOffense: 'Offense', gradesPass: 'Passing', gradesRun: 'Rushing', gradesPassRoute: 'Receiving',
-  gradesPassBlock: 'Pass block', gradesRunBlock: 'Run block', snapCountsTotal: 'Snaps',
-  snapCountsPassRoute: 'Routes', snapCountsPassBlock: 'Pass-block snaps', snapCountsRunBlock: 'Run-block snaps',
-  gradesDefense: 'Defense', gradesRunDefense: 'Run defense', gradesPassRushDefense: 'Pass rush',
-  gradesCoverageDefense: 'Coverage', gradesTackle: 'Tackling', snapCountsDefense: 'Snaps', tackles: 'Tackles',
-  sacks: 'Sacks', hurries: 'Hurries', interceptions: 'INTs', missedTackles: 'Missed tackles',
-  gradesMiscSt: 'Special teams', gradesKickReturn: 'Kick return', gradesPuntReturn: 'Punt return',
-  gradesPunter: 'Punting', gradesFgepKicker: 'FG/XP', gradesKickoffKicker: 'Kickoff', gradesLongSnap: 'Long snap',
-  totalSnaps: 'Snaps', playerGameCount: 'Games',
-};
 
 export default function PlayerPanel({ roster, pff, playerId, onChange, onClose }) {
   const isNew = playerId === 'new';
@@ -107,16 +96,7 @@ export default function PlayerPanel({ roster, pff, playerId, onChange, onClose }
                     {data.depth && <div className="sub">PFF depth chart: {data.depth.slots.join(', ')} · {data.depth.snaps} snaps ({data.depth.snapPct}%) · {data.depth.status}</div>}
                   </div>
                 </div>
-                {['offense', 'defense', 'specialTeams'].map((k) => data[k] && Object.keys(data[k]).length > 0 && (
-                  <div key={k} className="stats">
-                    <h4>{k === 'specialTeams' ? 'Special teams' : k[0].toUpperCase() + k.slice(1)}</h4>
-                    <dl>
-                      {Object.entries(data[k]).map(([sk, v]) => (
-                        <div key={sk}><dt>{STAT_LABELS[sk] ?? sk}</dt><dd>{sk.startsWith('grades') ? <Grade value={v} /> : v}</dd></div>
-                      ))}
-                    </dl>
-                  </div>
-                ))}
+                <PlayerReports playerId={playerId} syncedAt={pff?.meta?.syncedAt} />
               </>
             )}
           </section>
