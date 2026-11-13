@@ -129,7 +129,7 @@ function CareerTable({ career, position, onRefresh }) {
                 </td>
                 <td>{s.teams.join(' / ')}</td>
                 <td><Grade value={s.grade} kind={kindOf(s)} /></td>
-                {gradeCols.map(([k]) => <td key={k}><Grade value={s.stats[k]} kind={kindOf(s)} /></td>)}
+                {gradeCols.map(([k]) => <td key={k}><Grade value={s.stats[k]} /></td>)}
                 <td className="num">{s.snaps.toLocaleString()}</td>
                 {statCols.map(([k]) => <td key={k} className="num">{fmt(s.stats[k])}</td>)}
               </tr>
